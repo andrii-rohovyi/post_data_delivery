@@ -5,7 +5,7 @@ import logging
 from sklearn.cluster import KMeans
 import numpy as np
 
-from backend.logistic.utils import extract_vector_from_pulp_variable
+from logistic.utils import extract_vector_from_pulp_variable
 
 
 class LogisticOptimizer(object):

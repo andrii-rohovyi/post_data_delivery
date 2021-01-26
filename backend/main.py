@@ -2,7 +2,7 @@ import sys
 import logging
 from flask import Flask, request, jsonify
 
-from backend.logistic import LogisticOptimizer
+from logistic import LogisticOptimizer
 
 app = Flask(__name__)
 logging.basicConfig(stream=sys.stdout, level=logging.ERROR)

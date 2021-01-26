@@ -1,1 +1,1 @@
-from backend.logistic.logistic_optimizer import LogisticOptimizer
+from logistic.logistic_optimizer import LogisticOptimizer
