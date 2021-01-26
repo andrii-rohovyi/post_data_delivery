@@ -11,10 +11,7 @@ logging.basicConfig(stream=sys.stdout, level=logging.ERROR)
 @app.route("/", methods=["POST"])
 def main_page():
     """
-    Main page for
-
-    Returns
-    -------
+    Main server for choosing stores set for delivery man
 
     """
 
