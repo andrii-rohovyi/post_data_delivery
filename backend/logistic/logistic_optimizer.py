@@ -47,8 +47,11 @@ class LogisticOptimizer(object):
         """
         points_to_haversine = {}
         for point_1, point_2 in combinations(self.total_locations, 2):
-            points_to_haversine[f'{point_1}{point_2}'] = haversine(point_1, point_2)
-            points_to_haversine[f'{point_2}{point_1}'] = points_to_haversine[f'{point_1}{point_2}']
+            hv = haversine(point_1, point_2)
+            points_to_haversine.update({
+                f'{point_1}{point_2}': hv,
+                f'{point_2}{point_1}': hv
+            })
 
         return points_to_haversine
 
