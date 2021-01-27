@@ -10,7 +10,7 @@ from cached_property import cached_property
 
 from logistic.utils import (extract_vector_from_pulp_variable,
                             decode_list_from_vectors)
-from logistic.cofig import MIN_AMOUNT_OF_STORES_FOR_APPROXIMATION
+from logistic.cofig import MIN_AMOUNT_OF_STORES_FOR_APPROXIMATION, SOLVER
 
 
 class LogisticOptimizer(object):
@@ -58,7 +58,9 @@ class LogisticOptimizer(object):
 
         return points_to_haversine
 
-    def salesman_problem_mlp(self, locations: List[Tuple[float, float]]) -> List[Tuple[float, float]]:
+    def salesman_problem_mlp(self,
+                             locations: List[Tuple[float, float]],
+                             solver: str = SOLVER) -> List[Tuple[float, float]]:
         """
         Method for solving Salesman Problem for individual person using PuLP package
 
@@ -68,6 +70,9 @@ class LogisticOptimizer(object):
         ----------
         locations: List[Tuple[float, float]]
             List of delivery points for 1 delivery man in format [(lat, lon).....]
+        solver: str
+            Solver that is using by system.
+            List of all solvers can be found by command: pl.listSolvers(onlyAvailable=True)
 
         Returns
         -------
@@ -100,7 +105,9 @@ class LogisticOptimizer(object):
                                  ) <= n - 1, f"Limitations for connectness between point {point_1} and {point_2}"
         prob += 1 <= pl.lpSum([U_var[f'{point_1}'] for point_1 in locations[1:]]
                               ) <= n - 1, "Limitations for dummy variables"
-        logging.info(f'Status of 1-TSP optimization problem {pl.LpStatus[prob.solve()]}')
+
+        optimization_status = pl.LpStatus[prob.solve(pl.getSolver(solver, msg=0))]
+        logging.info(f'Status of 1-TSP optimization problem {optimization_status}')
         points_graph = {}
         for v in prob.variables():
             if (v.name[0] == 'X') and (v.varValue == 1):
@@ -108,11 +115,17 @@ class LogisticOptimizer(object):
 
         return decode_list_from_vectors(points_graph=points_graph, central_store=self.central_store)
 
-    def multiple_salesman_problem_mlp(self) -> List[List[Tuple[float, float]]]:
+    def multiple_salesman_problem_mlp(self, solver: str = SOLVER) -> List[List[Tuple[float, float]]]:
         """
         Here is the realization of MSTP using Linear Programming approach from https://arxiv.org/pdf/1803.09621.pdf
         from page 5. But with 1 difference 2a and 2b we use "<=" instead "=" in this case exist situations, when some
-        deliverman (salesman) don't move to any stores.
+        deliverman (salesman) don't move to any stores. And also add a new one, that both this sums should be equal
+
+        Parameters
+        ----------
+        solver: str
+            Solver that is using by system.
+            List of all solvers can be found by command: pl.listSolvers(onlyAvailable=True)
 
         Returns
         -------
@@ -151,6 +164,8 @@ class LogisticOptimizer(object):
 
             prob += pl.lpSum([X_var[f'{self.central_store}{i}&{k}'] for i in self.locations]) <= 1
             prob += pl.lpSum([X_var[f'{i}{self.central_store}&{k}'] for i in self.locations]) <= 1
+            prob += pl.lpSum([X_var[f'{self.central_store}{i}&{k}'] for i in self.locations]) - pl.lpSum(
+                [X_var[f'{i}{self.central_store}&{k}'] for i in self.locations]) == 0
 
             for i in self.locations:
                 prob += pl.lpSum([X_var[f'{j}{i}&{k}'] for j in self.total_locations if j != i]
@@ -164,7 +179,8 @@ class LogisticOptimizer(object):
                              + (n - self.amount_of_delivery_man)
                              * pl.lpSum([X_var[f'{point_1}{point_2}&{k}'] for k in range(self.amount_of_delivery_man)]
                                         ) <= n - self.amount_of_delivery_man - 1)
-        logging.info(f'Status of M-TSP optimization problem {pl.LpStatus[prob.solve()]}')
+        optimization_status = pl.LpStatus[prob.solve(pl.getSolver(solver, msg=0))]
+        logging.info(f'Status of M-TSP optimization problem {optimization_status}')
 
         # Decoding result
         points_graph = defaultdict(dict)
