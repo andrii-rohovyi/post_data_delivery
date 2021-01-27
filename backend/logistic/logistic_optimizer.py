@@ -4,6 +4,8 @@ import pulp as pl
 import logging
 from sklearn.cluster import KMeans
 import numpy as np
+from itertools import product, combinations
+from cached_property import cached_property
 
 from logistic.utils import extract_vector_from_pulp_variable
 
@@ -30,9 +32,9 @@ class LogisticOptimizer(object):
         self.central_store = central_store
         self.total_locations = locations + [central_store]
         self.amount_of_delivery_man = amount_of_delivery_man
-        self.road_to_weight = self.calculate_roads_weight()
 
-    def calculate_roads_weight(self) -> Dict[str, float]:
+    @cached_property
+    def road_to_weight(self) -> Dict[str, float]:
         """
         Method for calculating weight in salesman problem between every points for optimization problem
 
@@ -44,10 +46,9 @@ class LogisticOptimizer(object):
 
         """
         points_to_haversine = {}
-        for i, point_1 in enumerate(self.total_locations):
-            for j, point_2 in enumerate(self.total_locations[i + 1:]):
-                points_to_haversine[f'{point_1}{point_2}'] = haversine(point_1, point_2)
-                points_to_haversine[f'{point_2}{point_1}'] = points_to_haversine[f'{point_1}{point_2}']
+        for point_1, point_2 in combinations(self.total_locations, 2):
+            points_to_haversine[f'{point_1}{point_2}'] = haversine(point_1, point_2)
+            points_to_haversine[f'{point_2}{point_1}'] = points_to_haversine[f'{point_1}{point_2}']
 
         return points_to_haversine
 
@@ -84,11 +85,10 @@ class LogisticOptimizer(object):
         for i in locations:
             prob += pl.lpSum([X_var[f'{j}{i}'] for j in locations if i != j]
                              ) == 1, f"In point {i} can be just one road from another point"
-        for point_1 in locations[1:]:
-            for point_2 in locations[1:]:
-                if point_1 != point_2:
-                    prob += pl.lpSum([U_var[f'{point_1}'] - U_var[f'{point_2}'] + n * X_var[f'{point_1}{point_2}']]
-                                     ) <= n - 1, f"Limitations for connectness between point {point_1} and {point_2}"
+        for point_1, point_2 in product(locations[1:], locations[1:]):
+            if point_1 != point_2:
+                prob += pl.lpSum([U_var[f'{point_1}'] - U_var[f'{point_2}'] + n * X_var[f'{point_1}{point_2}']]
+                                 ) <= n - 1, f"Limitations for connectness between point {point_1} and {point_2}"
         prob += 1 <= pl.lpSum([U_var[f'{point_1}'] for point_1 in locations[1:]]
                               ) <= n - 1, "Limitations for dummy variables"
         logging.info(f'Status of optimization problem {pl.LpStatus[prob.solve()]}')
