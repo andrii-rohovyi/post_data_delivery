@@ -8,7 +8,7 @@ import numpy as np
 from itertools import product, combinations
 from cached_property import cached_property
 
-from logistic.utils import (extract_vector_from_pulp_variable, extract_road_vector_from_mtsm_problem,
+from logistic.utils import (extract_vector_from_pulp_variable,
                             decode_list_from_vectors)
 from logistic.cofig import MIN_AMOUNT_OF_STORES_FOR_APPROXIMATION
 
@@ -134,7 +134,7 @@ class LogisticOptimizer(object):
 
         prob = pl.LpProblem("Schedule", pl.LpMinimize)
 
-        prob += pl.lpSum([self.road_to_weight[extract_road_vector_from_mtsm_problem(i)] * X_var[i] for i in X_var])
+        prob += pl.lpSum([self.road_to_weight[i.split('&')[0]] * X_var[i] for i in X_var])
         for i in self.locations:
             prob += pl.lpSum([X_var[f'{i}{j}&{k}']
                               for j in self.total_locations

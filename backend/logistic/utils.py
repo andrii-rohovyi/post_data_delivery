@@ -23,33 +23,22 @@ def extract_vector_from_pulp_variable(x: str) -> Dict[float, float]:
     return {eval(x[2: new_point_start_location]): eval(x[new_point_start_location:])}
 
 
-def extract_road_vector_from_mtsm_problem(x: str) -> str:
-    """
-
-    Parameters
-    ----------
-    x
-
-    Returns
-    -------
-
-    """
-    return x.split('&')[0]
-
-
 def decode_list_from_vectors(points_graph: Dict[Tuple[float, float], Tuple[float, float]],
                              central_store: Tuple[float, float]
                              ) -> List[Tuple[float, float]]:
     """
+    Function for converting dictionary with roads vector into a list result
 
     Parameters
     ----------
-    points_graph
-    central_store
-
+    points_graph: Dict[Tuple[float, float], Tuple[float, float]]
+        Dictionary with stores vectors. Example: {(0, 0): (3, 49), (3, 49): (9, -51), (9, -51): (0, 0)}
+    central_store: Tuple[float, float]
+        Location of central store from each trip will started
     Returns
     -------
-
+    List[Tuple[float, float]]
+        Decoded list with a points sequence in trip
     """
     start_point = points_graph[central_store]
     points_sequence = [central_store, start_point]
