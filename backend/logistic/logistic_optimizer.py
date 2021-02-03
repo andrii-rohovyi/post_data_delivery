@@ -10,26 +10,26 @@ from ortools.constraint_solver import pywrapcp
 class LogisticOptimizer(object):
 
     def __init__(self,
-                 locations: List[Tuple[float, float]],
                  central_store: Tuple[float, float],
-                 amount_of_delivery_man: int):
+                 locations: List[Tuple[float, float]],
+                 amount_of_couriers: int):
         """
         Class for scheduling delivery process
 
         Parameters
         ----------
-        locations: List[Tuple[float, float]]
-            List of all delivery points in format [(lat, lon).....]
         central_store: Tuple[float]
            Location of store from each delivery process starts in format (lat, lon)
-        amount_of_delivery_man: int
-            Amount of delivery man
+        locations: List[Tuple[float, float]]
+            List of all delivery points in format [(lat, lon).....]
+        amount_of_couriers: int
+            Amount of couriers
         """
         self.total_locations = [central_store] + locations
-        self.amount_of_delivery_man = amount_of_delivery_man
+        self.amount_of_couriers = amount_of_couriers
 
         # Create the routing index manager.
-        self.manager = pywrapcp.RoutingIndexManager(len(self.total_locations), self.amount_of_delivery_man, 0)
+        self.manager = pywrapcp.RoutingIndexManager(len(self.total_locations), self.amount_of_couriers, 0)
 
     @cached_property
     def road_to_weight(self) -> Dict[Tuple[Tuple[float, float], Tuple[float, float]], float]:
@@ -96,7 +96,7 @@ class LogisticOptimizer(object):
 
         """
         routes = []
-        for vehicle_id in range(self.amount_of_delivery_man):
+        for vehicle_id in range(self.amount_of_couriers):
             index = routing.Start(vehicle_id)
             route = []
             while not routing.IsEnd(index):
@@ -150,4 +150,5 @@ class LogisticOptimizer(object):
 
         return self.decode_solution(solution=solution,
                                     routing=routing)
+
 

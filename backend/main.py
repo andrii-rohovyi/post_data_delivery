@@ -18,7 +18,7 @@ def main_page():
     data = request.get_json(force=True)
     model = LogisticOptimizer(central_store=tuple(data['head_location']),
                               locations=[(x[0], x[1]) for x in data['stores_locations']],
-                              amount_of_delivery_man=data['deliveryman_cnt'])
+                              amount_of_couriers=data['amount_of_couriers'])
     result = model.solve_delivery_problem()
     result = [list(x) for x in result]
 
