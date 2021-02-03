@@ -1,5 +1,7 @@
 {
 "amount_of_couriers": 2,
 "head_location": [-45.0, -45.0],
-"stores_locations": [[0, 0], [90, 90], [45, 45], [45, 48], [47, 48], [1, 1]]
+"stores_locations": [[0, 0], [90, 90], [45, 45], [45, 48], [47, 48], [1, 1]],
+"stores_demands": [1, 1, 1, 1, 1, 1],
+"couriers_capacities": [2, 4]
 }

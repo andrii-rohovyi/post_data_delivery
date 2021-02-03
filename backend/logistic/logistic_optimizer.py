@@ -12,7 +12,9 @@ class LogisticOptimizer(object):
     def __init__(self,
                  central_store: Tuple[float, float],
                  locations: List[Tuple[float, float]],
-                 amount_of_couriers: int):
+                 stores_demands: List[int],
+                 amount_of_couriers: int,
+                 couriers_capacities: List[int]):
         """
         Class for scheduling delivery process
 
@@ -22,11 +24,18 @@ class LogisticOptimizer(object):
            Location of store from each delivery process starts in format (lat, lon)
         locations: List[Tuple[float, float]]
             List of all delivery points in format [(lat, lon).....]
+        stores_demands: List[int]
+            List of demands of each store
         amount_of_couriers: int
             Amount of couriers
+        couriers_capacities: List[int]
+            List of capacities of each courier
         """
         self.total_locations = [central_store] + locations
+        self.stores_demands = [0] + stores_demands
         self.amount_of_couriers = amount_of_couriers
+        self.couriers_capacities = couriers_capacities
+
 
         # Create the routing index manager.
         self.manager = pywrapcp.RoutingIndexManager(len(self.total_locations), self.amount_of_couriers, 0)
@@ -74,6 +83,24 @@ class LogisticOptimizer(object):
         to_node = self.manager.IndexToNode(to_index)
         return self.road_to_weight[(from_node, to_node)]
 
+    def demand_callback(self, from_index) -> int:
+        """
+        Returns the demand of the node.
+
+        Parameters
+        ----------
+        from_index
+
+        Returns
+        -------
+        int
+            Number of products demanded by a node (route)
+
+        """
+        # Convert from routing variable Index to demands NodeIndex.
+        from_node = self.manager.IndexToNode(from_index)
+        return self.stores_demands[from_node]
+
     def decode_solution(self,
                         routing: ortools.constraint_solver.pywrapcp.RoutingModel,
                         solution: ortools.constraint_solver.pywrapcp.Assignment
@@ -108,21 +135,19 @@ class LogisticOptimizer(object):
 
         return routes
 
-    def solve_delivery_problem(self) -> List[List[Tuple[int, int]]]:
-        """
-        Method for solving delivery problem.
-        Depending from hardness of request, we choose different solution to solve a problem.
-
-        Returns
-        -------
-        List[List[Tuple[int, int]]]
-            List of sorted sequence of delivery points for each delivery man.
-            Every points subset starts with store location
-
-        """
-
-        # Create Routing Model.
+    def solve(self):
         routing = pywrapcp.RoutingModel(self.manager)
+
+        routing = self._add_distance_dimention(routing)
+        routing = self._add_capacity_dimention(routing)
+
+        search_parameters = self._create_search_parameters()
+
+        solution = routing.SolveWithParameters(search_parameters)
+
+        return self.decode_solution(solution=solution, routing=routing)
+
+    def _add_distance_dimention(self, routing):
 
         transit_callback_index = routing.RegisterTransitCallback(self.weight_callback)
 
@@ -137,18 +162,42 @@ class LogisticOptimizer(object):
             300000,  # vehicle maximum travel distance
             True,  # start cumul to zero
             dimension_name)
+
         distance_dimension = routing.GetDimensionOrDie(dimension_name)
         distance_dimension.SetGlobalSpanCostCoefficient(100)
 
-        # Setting first solution heuristic.
+        return routing
+
+    def _add_capacity_dimention(self, routing):
+
+        demand_callback_index = routing.RegisterUnaryTransitCallback(self.demand_callback)
+
+        dimension_name = 'Capacity'
+        routing.AddDimensionWithVehicleCapacity(
+            demand_callback_index,
+            0,  # null capacity slack
+            self.couriers_capacities,  # vehicle maximum capacities
+            True,  # start cumul to zero
+            dimension_name)
+
+        return routing
+
+    def _create_search_parameters(self):
+
         search_parameters = pywrapcp.DefaultRoutingSearchParameters()
+
+        # distance search parameter
         search_parameters.first_solution_strategy = (
             routing_enums_pb2.FirstSolutionStrategy.PATH_CHEAPEST_ARC)
 
-        # Solve the problem.
-        solution = routing.SolveWithParameters(search_parameters)
+        # capacity search parameter
+        search_parameters.local_search_metaheuristic = (
+            routing_enums_pb2.LocalSearchMetaheuristic.GUIDED_LOCAL_SEARCH)
 
-        return self.decode_solution(solution=solution,
-                                    routing=routing)
+        search_parameters.time_limit.FromSeconds(1)
+
+        return search_parameters
+
+
 
 
