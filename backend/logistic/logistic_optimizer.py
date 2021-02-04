@@ -1,3 +1,4 @@
+from typing import List, Tuple, Dict, Union
 from haversine import haversine
 from itertools import combinations
 from cached_property import cached_property
@@ -177,7 +178,19 @@ class LogisticOptimizer(object):
 
         return {'routes': routes, 'dropped_nodes': dropped_nodes}
 
-    def solve(self):
+    def solve(self) -> Dict[str, Union[List[Tuple[int, int]], List[List[Tuple[int, int]]]]]:
+        """
+        The main method of the class. Method for solving delivery problem.
+        Depending from hardness of request, we add different dimentions to solve a problem.
+        Returns
+        -------
+        Dict[str, Union[List[Tuple[int, int]], List[List[Tuple[int, int]]]]]
+            routes:
+                List of sorted sequence of delivery points for each delivery man.
+                Every points subset starts with store location
+            dropped_modes:
+                Nodes that can't be reached from central store
+        """
         routing = pywrapcp.RoutingModel(self.manager)
 
         routing = self._add_distance_dimention(routing)
@@ -194,6 +207,12 @@ class LogisticOptimizer(object):
         return self.decode_solution(solution=solution, routing=routing)
 
     def _add_distance_dimention(self, routing):
+        """
+        Method for adding distance dimention to routing.
+        Returns
+        -------
+        Rounting with added distance dimention.
+        """
 
         transit_callback_index = routing.RegisterTransitCallback(self.weight_callback)
 
@@ -215,6 +234,12 @@ class LogisticOptimizer(object):
         return routing
 
     def _add_capacity_dimention(self, routing):
+        """
+        Method for adding capacity dimention to routing.
+        Returns
+        -------
+        Rounting with added capacity dimention.
+        """
 
         demand_callback_index = routing.RegisterUnaryTransitCallback(self.demand_callback)
 
@@ -229,6 +254,12 @@ class LogisticOptimizer(object):
         return routing
 
     def _create_search_parameters(self):
+        """
+        Method for creating search parameters for our tasks.
+        Returns
+        -------
+        Search parameters for all of our problems.
+        """
 
         search_parameters = pywrapcp.DefaultRoutingSearchParameters()
 
@@ -243,6 +274,4 @@ class LogisticOptimizer(object):
         search_parameters.time_limit.FromSeconds(1)
 
         return search_parameters
-
-
 
