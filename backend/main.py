@@ -20,8 +20,9 @@ def main_page():
                               locations=[(x[0], x[1]) for x in data['stores_locations']],
                               stores_demands=data['stores_demands'],
                               amount_of_couriers=data['amount_of_couriers'],
-                              couriers_capacities=data['couriers_capacities'])
-    result = model.solve()
+                              couriers_capacities=data['couriers_capacities'],
+                              mode='haversine')
+    result = model.solve()['routes']
     result = [list(x) for x in result]
 
     return jsonify(result)

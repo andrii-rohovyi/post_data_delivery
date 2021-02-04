@@ -1,10 +1,13 @@
-from typing import List, Tuple, Dict
 from haversine import haversine
 from itertools import combinations
 from cached_property import cached_property
+import googlemaps
+import os
 import ortools
 from ortools.constraint_solver import routing_enums_pb2
 from ortools.constraint_solver import pywrapcp
+
+from logistic.config import MAX_WEIGHT
 
 
 class LogisticOptimizer(object):
@@ -14,7 +17,8 @@ class LogisticOptimizer(object):
                  locations: List[Tuple[float, float]],
                  stores_demands: List[int],
                  amount_of_couriers: int,
-                 couriers_capacities: List[int]):
+                 couriers_capacities: List[int],
+                 mode: str = 'driving'):
         """
         Class for scheduling delivery process
 
@@ -30,12 +34,18 @@ class LogisticOptimizer(object):
             Amount of couriers
         couriers_capacities: List[int]
             List of capacities of each courier
+       mode: str
+            Mode that is using for calculating graph weights.
+            There can be several modes that is supported: "driving", "walking", "bicycling", "transit", "haversine"
         """
         self.total_locations = [central_store] + locations
         self.stores_demands = [0] + stores_demands
         self.amount_of_couriers = amount_of_couriers
         self.couriers_capacities = couriers_capacities
+        self.mode = mode
 
+        if mode != 'haversine':
+            self.gmaps = googlemaps.Client(key=os.environ.get('API_KEY'))
 
         # Create the routing index manager.
         self.manager = pywrapcp.RoutingIndexManager(len(self.total_locations), self.amount_of_couriers, 0)
@@ -52,16 +62,37 @@ class LogisticOptimizer(object):
             Example: ((0, 0), (45, 45)) : 2
 
         """
-        points_to_haversine = {(i, i): 0 for i in range(len(self.total_locations))}
+        points_to_weight = {(i, i): 0 for i in range(len(self.total_locations))}
 
         for point_1, point_2 in combinations(enumerate(self.total_locations), 2):
-            hv = haversine(point_1[1], point_2[1])
-            points_to_haversine.update({
-                (point_1[0], point_2[0]): hv,
-                (point_2[0], point_1[0]): hv
-            })
+            if self.mode == 'haversine':
+                hv = haversine(point_1[1], point_2[1])
+                points_to_weight.update({
+                    (point_1[0], point_2[0]): hv,
+                    (point_2[0], point_1[0]): hv
+                })
 
-        return points_to_haversine
+            else:
+                info_1 = self.gmaps.directions(origin=point_1[1],
+                                               destination=point_2[1],
+                                               mode=self.mode,
+                                               transit_mode=["bus", "subway", "train", "tram", "rail"]
+                                               )
+                weight_1 = info_1[0]['legs'][0]['duration']['value'] if info_1 != [] else MAX_WEIGHT
+
+                info_2 = self.gmaps.directions(origin=point_2[1],
+                                               destination=point_1[1],
+                                               mode=self.mode,
+                                               transit_mode=["bus", "subway", "train", "tram", "rail"]
+                                               )
+                weight_2 = info_2[0]['legs'][0]['duration']['value'] if info_2 != [] else MAX_WEIGHT
+
+                points_to_weight.update({
+                    (point_1[0], point_2[0]): weight_1,
+                    (point_2[0], point_1[0]): weight_2
+                })
+
+        return points_to_weight
 
     def weight_callback(self, from_index, to_index) -> float:
         """
@@ -104,7 +135,7 @@ class LogisticOptimizer(object):
     def decode_solution(self,
                         routing: ortools.constraint_solver.pywrapcp.RoutingModel,
                         solution: ortools.constraint_solver.pywrapcp.Assignment
-                        ) -> List[List[Tuple[int, int]]]:
+                        ) -> Dict[str, Union[List[Tuple[int, int]], List[List[Tuple[int, int]]]]]:
         """
         Decode ortools solution to REST format
 
@@ -117,11 +148,22 @@ class LogisticOptimizer(object):
 
         Returns
         -------
-        List[List[Tuple[int, int]]]
-            List of routes that build for deliverymen
-            Example: [[(0, 0), (-84, -15), (-36, 107), (-71, -4), (23, 55)]]
+        Dict[str, Union[List[Tuple[int, int]], List[List[Tuple[int, int]]]]]
+            List of routes that build for deliverymen amd list of nodes that can't be reached in this mode from
+            central store
+            Example: {'routes': [[(0, 0), (-84, -15), (-36, 107), (-71, -4), (23, 55)]], 'dropped_nodes': [] }
 
         """
+        # calculate dropping nodes
+        dropped_nodes = []
+
+        for node in range(routing.Size()):
+            if routing.IsStart(node) or routing.IsEnd(node):
+                continue
+            if solution.Value(routing.NextVar(node)) == node:
+                dropped_nodes.append(self.total_locations[self.manager.IndexToNode(node)])
+
+        # calculate route for deliveryman
         routes = []
         for vehicle_id in range(self.amount_of_couriers):
             index = routing.Start(vehicle_id)
@@ -133,13 +175,17 @@ class LogisticOptimizer(object):
             if len(route) > 1:
                 routes.append(route)
 
-        return routes
+        return {'routes': routes, 'dropped_nodes': dropped_nodes}
 
     def solve(self):
         routing = pywrapcp.RoutingModel(self.manager)
 
         routing = self._add_distance_dimention(routing)
         routing = self._add_capacity_dimention(routing)
+
+       # Allow to drop nodes.
+        for node in range(1, len(self.total_locations)):
+            routing.AddDisjunction([self.manager.NodeToIndex(node)], MAX_WEIGHT)
 
         search_parameters = self._create_search_parameters()
 
@@ -159,7 +205,7 @@ class LogisticOptimizer(object):
         routing.AddDimension(
             transit_callback_index,
             0,  # no slack
-            300000,  # vehicle maximum travel distance
+            MAX_WEIGHT,  # vehicle maximum travel weight
             True,  # start cumul to zero
             dimension_name)
 
@@ -197,7 +243,6 @@ class LogisticOptimizer(object):
         search_parameters.time_limit.FromSeconds(1)
 
         return search_parameters
-
 
 
 
