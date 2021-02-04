@@ -1,15 +1,14 @@
-from typing import List, Tuple, Dict
+from typing import List, Tuple, Dict, Union
 from haversine import haversine
 from itertools import combinations
 from cached_property import cached_property
 import googlemaps
 import os
-import math
 import ortools
 from ortools.constraint_solver import routing_enums_pb2
 from ortools.constraint_solver import pywrapcp
 
-from backend.logistic.config import MAX_WEIGHT
+from logistic.config import MAX_WEIGHT
 
 
 class LogisticOptimizer(object):
@@ -70,15 +69,17 @@ class LogisticOptimizer(object):
             else:
                 info_1 = self.gmaps.directions(origin=point_1[1],
                                                destination=point_2[1],
-                                               mode=self.mode
+                                               mode=self.mode,
+                                               transit_mode=["bus", "subway", "train", "tram", "rail"]
                                                )
-                weight_1 = info_1[0]['legs'][0]['duration']['value'] if info_1 != [] else math.inf
+                weight_1 = info_1[0]['legs'][0]['duration']['value'] if info_1 != [] else MAX_WEIGHT
 
                 info_2 = self.gmaps.directions(origin=point_2[1],
                                                destination=point_1[1],
-                                               mode=self.mode
+                                               mode=self.mode,
+                                               transit_mode=["bus", "subway", "train", "tram", "rail"]
                                                )
-                weight_2 = info_2[0]['legs'][0]['duration']['value'] if info_2 != [] else math.inf
+                weight_2 = info_2[0]['legs'][0]['duration']['value'] if info_2 != [] else MAX_WEIGHT
 
                 points_to_weight.update({
                     (point_1[0], point_2[0]): weight_1,
@@ -110,7 +111,7 @@ class LogisticOptimizer(object):
     def decode_solution(self,
                         routing: ortools.constraint_solver.pywrapcp.RoutingModel,
                         solution: ortools.constraint_solver.pywrapcp.Assignment
-                        ) -> List[List[Tuple[int, int]]]:
+                        ) -> Dict[str, Union[List[Tuple[int, int]], List[List[Tuple[int, int]]]]]:
         """
         Decode ortools solution to REST format
 
@@ -123,11 +124,22 @@ class LogisticOptimizer(object):
 
         Returns
         -------
-        List[List[Tuple[int, int]]]
-            List of routes that build for deliverymen
-            Example: [[(0, 0), (-84, -15), (-36, 107), (-71, -4), (23, 55)]]
+        Dict[str, Union[List[Tuple[int, int]], List[List[Tuple[int, int]]]]]
+            List of routes that build for deliverymen amd list of nodes that can't be reached in this mode from
+            central store
+            Example: {'routes': [[(0, 0), (-84, -15), (-36, 107), (-71, -4), (23, 55)]], 'dropped_nodes': [] }
 
         """
+        # calculate dropping nodes
+        dropped_nodes = []
+
+        for node in range(routing.Size()):
+            if routing.IsStart(node) or routing.IsEnd(node):
+                continue
+            if solution.Value(routing.NextVar(node)) == node:
+                dropped_nodes.append(self.total_locations[self.manager.IndexToNode(node)])
+
+        # calculate route for deliveryman
         routes = []
         for vehicle_id in range(self.amount_of_delivery_man):
             index = routing.Start(vehicle_id)
@@ -139,18 +151,21 @@ class LogisticOptimizer(object):
             if len(route) > 1:
                 routes.append(route)
 
-        return routes
+        return {'routes': routes, 'dropped_nodes': dropped_nodes}
 
-    def solve_delivery_problem(self) -> List[List[Tuple[int, int]]]:
+    def solve_delivery_problem(self) -> Dict[str, Union[List[Tuple[int, int]], List[List[Tuple[int, int]]]]]:
         """
         Method for solving delivery problem.
         Depending from hardness of request, we choose different solution to solve a problem.
 
         Returns
         -------
-        List[List[Tuple[int, int]]]
-            List of sorted sequence of delivery points for each delivery man.
-            Every points subset starts with store location
+        Dict[str, Union[List[Tuple[int, int]], List[List[Tuple[int, int]]]]]
+            routes:
+                List of sorted sequence of delivery points for each delivery man.
+                Every points subset starts with store location
+            dropped_modes:
+                Nodes that can't be reached from central store
 
         """
 

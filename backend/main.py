@@ -18,8 +18,9 @@ def main_page():
     data = request.get_json(force=True)
     model = LogisticOptimizer(central_store=tuple(data['head_location']),
                               locations=[(x[0], x[1]) for x in data['stores_locations']],
-                              amount_of_delivery_man=data['deliveryman_cnt'])
-    result = model.solve_delivery_problem()
+                              amount_of_delivery_man=data['deliveryman_cnt'],
+                              mode='haversine')
+    result = model.solve_delivery_problem()['routes']
     result = [list(x) for x in result]
 
     return jsonify(result)
