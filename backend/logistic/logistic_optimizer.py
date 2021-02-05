@@ -19,6 +19,7 @@ class LogisticOptimizer(object):
                  stores_demands: List[int],
                  amount_of_couriers: int,
                  couriers_capacities: List[int],
+                 time_windows: List[Tuple[int, int]],
                  mode: str = 'driving'):
         """
         Class for scheduling delivery process
@@ -35,6 +36,8 @@ class LogisticOptimizer(object):
             Amount of couriers
         couriers_capacities: List[int]
             List of capacities of each courier
+        time_windows: List[Tuple[int, int]]
+            List of time windows, one window for each store
        mode: str
             Mode that is using for calculating graph weights.
             There can be several modes that is supported: "driving", "walking", "bicycling", "transit", "haversine"
@@ -43,7 +46,9 @@ class LogisticOptimizer(object):
         self.stores_demands = [0] + stores_demands
         self.amount_of_couriers = amount_of_couriers
         self.couriers_capacities = couriers_capacities
+        self.time_windows = time_windows
         self.mode = mode
+        
 
         if mode != 'haversine':
             self.gmaps = googlemaps.Client(key=os.environ.get('API_KEY'))
@@ -133,6 +138,25 @@ class LogisticOptimizer(object):
         from_node = self.manager.IndexToNode(from_index)
         return self.stores_demands[from_node]
 
+    def time_callback(self, from_index, to_index) -> float:
+        """
+        Returns the travel time between the two nodes.
+
+        Parameters
+        ----------
+        from_index
+        to_index
+        Returns
+        -------
+        float
+            Time to get from one node to another (route time)
+
+        """
+        # Convert from routing variable Index to time matrix NodeIndex.
+        from_node = self.manager.IndexToNode(from_index)
+        to_node = self.manager.IndexToNode(to_index)
+        return self.road_to_weight[(from_node, to_node)]
+
     def decode_solution(self,
                         routing: ortools.constraint_solver.pywrapcp.RoutingModel,
                         solution: ortools.constraint_solver.pywrapcp.Assignment
@@ -194,6 +218,7 @@ class LogisticOptimizer(object):
         routing = pywrapcp.RoutingModel(self.manager)
 
         routing = self._add_distance_dimention(routing)
+        routing = self._add_time_window_dimention(routing)
         routing = self._add_capacity_dimention(routing)
 
        # Allow to drop nodes.
@@ -220,6 +245,7 @@ class LogisticOptimizer(object):
         routing.SetArcCostEvaluatorOfAllVehicles(transit_callback_index)
 
         # Add Distance constraint.
+        dimension_name = 'Distance'
         routing.AddDimension(
             transit_callback_index,
             0,  # no slack
@@ -252,6 +278,51 @@ class LogisticOptimizer(object):
 
         return routing
 
+    def _add_time_window_dimention(self, routing):
+        """
+        Method for adding time window dimention to routing.
+        Returns
+        -------
+        Rounting with added time window dimention.
+        """
+        
+        transit_callback_index = routing.RegisterTransitCallback(self.time_callback)
+
+        # Define cost of each arc.
+        routing.SetArcCostEvaluatorOfAllVehicles(transit_callback_index)
+
+        # Add Time Windows constraint.
+        dimension_name = 'Time'
+        routing.AddDimension(
+            transit_callback_index,
+            30,  # allow waiting time
+            30,  # maximum time per vehicle
+            False,  # Don't force start cumul to zero.
+            dimension_name)
+
+        time_dimension = routing.GetDimensionOrDie(dimension_name)
+        # Add time window constraints for each location except depot.
+        for location_idx, time_window in enumerate(self.time_windows):
+            if location_idx == 0:
+                continue    
+            index = self.manager.NodeToIndex(location_idx)
+            time_dimension.CumulVar(index).SetRange(time_window[0], time_window[1])
+        # Add time window constraints for each vehicle start node.
+        for vehicle_id in range(self.amount_of_couriers):
+            index = routing.Start(vehicle_id)
+            time_dimension.CumulVar(index).SetRange(self.time_windows[0][0],
+                                                    self.time_windows[0][1])
+
+        # Instantiate route start and end times to produce feasible times.
+        for i in range(self.amount_of_couriers):
+            routing.AddVariableMinimizedByFinalizer(
+                time_dimension.CumulVar(routing.Start(i)))
+            routing.AddVariableMinimizedByFinalizer(
+                time_dimension.CumulVar(routing.End(i)))
+
+        return routing
+
+
     def _create_search_parameters(self):
         """
         Method for creating search parameters for our tasks.
@@ -259,6 +330,7 @@ class LogisticOptimizer(object):
         -------
         Search parameters for all of our problems.
         """
+
         search_parameters = pywrapcp.DefaultRoutingSearchParameters()
 
         # distance search parameter
@@ -272,3 +344,4 @@ class LogisticOptimizer(object):
         search_parameters.time_limit.FromSeconds(1)
 
         return search_parameters
+

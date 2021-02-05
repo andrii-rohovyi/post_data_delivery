@@ -1,0 +1,8 @@
+{
+"amount_of_couriers": 1,
+"head_location": [50.486228, 30.472595],
+"stores_locations": [[50.489023, 30.467676], [50.489030, 30.472075]],
+"stores_demands": [1, 2],
+"couriers_capacities": [5],
+"time_windows": [[0, 8], [0, 1], [2, 3]]
+}

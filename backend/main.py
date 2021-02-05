@@ -21,6 +21,7 @@ def main_page():
                               stores_demands=data['stores_demands'],
                               amount_of_couriers=data['amount_of_couriers'],
                               couriers_capacities=data['couriers_capacities'],
+                              time_windows=data['time_windows'],
                               mode='haversine')
     result = model.solve()['routes']
     result = [list(x) for x in result]
