@@ -220,7 +220,6 @@ class LogisticOptimizer(object):
         routing.SetArcCostEvaluatorOfAllVehicles(transit_callback_index)
 
         # Add Distance constraint.
-        dimension_name = 'Distance'
         routing.AddDimension(
             transit_callback_index,
             0,  # no slack
@@ -260,7 +259,6 @@ class LogisticOptimizer(object):
         -------
         Search parameters for all of our problems.
         """
-
         search_parameters = pywrapcp.DefaultRoutingSearchParameters()
 
         # distance search parameter
@@ -274,4 +272,3 @@ class LogisticOptimizer(object):
         search_parameters.time_limit.FromSeconds(1)
 
         return search_parameters
-
