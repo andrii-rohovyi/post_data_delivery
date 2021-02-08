@@ -1,13 +1,12 @@
 from typing import List, Tuple, Dict, Union
 from itertools import combinations
 from cached_property import cached_property
-import googlemaps
-import os
 import time
 import ortools
 from ortools.constraint_solver import routing_enums_pb2
 from ortools.constraint_solver import pywrapcp
 
+from logistic.geo_calculation import GoogleQuerying
 from logistic.config import MAX_WEIGHT, SOLUTION_CALCULATION_MAX_TIME
 from logistic.utils import duration_approximation
 
@@ -60,7 +59,7 @@ class LogisticOptimizer(object):
                                  + [store.get('time_window', [int(time.time()), MAX_WEIGHT]) for store in stores])
 
         if not approximation:
-            self.gmaps = googlemaps.Client(key=os.environ.get('API_KEY'))
+            self.gmaps = GoogleQuerying(mode=mode)
         self.approximation = approximation
 
         # Create the routing index manager.
@@ -88,25 +87,13 @@ class LogisticOptimizer(object):
                     (point_2[0], point_1[0]): duration
                 })
 
-            else:
-                info_1 = self.gmaps.directions(origin=point_1[1],
-                                               destination=point_2[1],
-                                               mode=self.mode,
-                                               transit_mode=["bus", "subway", "train", "tram", "rail"]
-                                               )
-                weight_1 = info_1[0]['legs'][0]['duration']['value'] if info_1 != [] else MAX_WEIGHT
-
-                info_2 = self.gmaps.directions(origin=point_2[1],
-                                               destination=point_1[1],
-                                               mode=self.mode,
-                                               transit_mode=["bus", "subway", "train", "tram", "rail"]
-                                               )
-                weight_2 = info_2[0]['legs'][0]['duration']['value'] if info_2 != [] else MAX_WEIGHT
-
-                points_to_weight.update({
-                    (point_1[0], point_2[0]): weight_1,
-                    (point_2[0], point_1[0]): weight_2
-                })
+        else:
+            points_for_querying = {(x, y): (x_i, y_i)
+                                   for x_i, x in enumerate(self.total_locations)
+                                   for y_i, y in enumerate(self.total_locations)
+                                   if x != y}
+            new_points_weights = self.gmaps.duration_calculation(list(points_for_querying.keys()))
+            points_to_weight.update({points_for_querying[key]: value for key, value in new_points_weights.items()})
 
         return points_to_weight
 
