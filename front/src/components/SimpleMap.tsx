@@ -39,15 +39,17 @@ export const SimpleMap: React.FC<Props> = ({
           defaultZoom={11}
           onClick={addMapPoint}
         >
-            {console.log(result, 'result')}
             {showResult ?
                 result.map((courierPoints, count) => (
                     courierPoints.map((point, number) => (
+                        <>
                         <AnyReactComponent
                           lat={point.lat}
                           lng={point.lng}
                           text={`Courier ${count} number ${number}`}
                         />
+                            {console.log(count, number)}
+                        </>
                     ))
               )) :
                 points.map((point, count) => (

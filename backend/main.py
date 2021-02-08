@@ -26,7 +26,6 @@ def main_page():
                               mode='haversine')
     result = model.solve_delivery_problem()['routes']
     result = [list(x) for x in result]
-    print(len(result))
 
     return jsonify(result)
 

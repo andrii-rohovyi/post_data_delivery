@@ -82,64 +82,67 @@ export const AddPointForm: React.FC<Props> = ({
             values,
           }) => {
           return (
-            <form onSubmit={handleSubmit}>
-              <div>
-                <Field
-                  name='deliveryman_cnt'
-                  component="input"
-                  type="number"
-                  placeholder="Delivery Man Count"
-                />
-                <FieldArray name="points">
-              {({ fields }) =>
-                fields.map((name, index) => (
-                  <div key={name}>
-                    <label>Point #{index + 1}</label>
+              <div style={{padding: "10px"}}>
+                <form onSubmit={handleSubmit}>
+                  <div style={{border: "2px solid rgb(255, 145, 0)", borderRadius: "10px", padding: "16px"}}>
+                      <label>Delivery Man {' '}</label>
                     <Field
-                      name={`${name}.lat`}
+                      name='deliveryman_cnt'
                       component="input"
-                      placeholder="Lat"
+                      type="number"
+                      placeholder="Delivery Man Count"
                     />
-                    <Field
-                      name={`${name}.lng`}
-                      component="input"
-                      placeholder="Lon"
-                    />
-                    <span
-                      onClick={() => fields.remove(index)}
-                      style={{ cursor: 'pointer' }}
-                    >
-                      ❌
-                    </span>
+                    <FieldArray name="points">
+                  {({ fields }) =>
+                    fields.map((name, index) => (
+                      <div key={name} style={{padding: "10px 0 10px 0"}}>
+                        <label>Point #{index + 1}</label>
+                        <Field
+                          name={`${name}.lat`}
+                          component="input"
+                          placeholder="Lat"
+                        />
+                        <Field
+                          name={`${name}.lng`}
+                          component="input"
+                          placeholder="Lon"
+                        />
+                        <span
+                          onClick={() => fields.remove(index)}
+                          style={{ cursor: 'pointer' }}
+                        >
+                            {' '} ❌
+                        </span>
+                      </div>
+                    ))
+                  }
+                </FieldArray>
                   </div>
-                ))
-              }
-            </FieldArray>
+                  <div className="buttons" style={{paddingTop: "20px"}}>
+                  <button
+                    type="button"
+                    onClick={() => push('points', undefined)}
+                  >
+                    Add Point
+                  </button>
+                  <button type="button" onClick={() => pop('points')}>
+                    Remove Point
+                  </button>
+                    <button type="submit" disabled={submitting || pristine}>
+                      Submit
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                          form.reset();
+                      }}
+                      disabled={submitting}
+                    >
+                      Reset
+                    </button>
+                  </div>
+                </form>
               </div>
-              <div className="buttons">
-              <button
-                type="button"
-                onClick={() => push('points', undefined)}
-              >
-                Add Point
-              </button>
-              <button type="button" onClick={() => pop('points')}>
-                Remove Point
-              </button>
-                <button type="submit" disabled={submitting || pristine}>
-                  Submit
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                      form.reset();
-                  }}
-                  disabled={submitting}
-                >
-                  Reset
-                </button>
-              </div>
-            </form>
     )}}
           />
     )
