@@ -43,7 +43,7 @@ class LogisticOptimizer(object):
         self.amount_of_couriers = len(couriers)
         self.couriers_capacities = [courier['capacity'] for courier in couriers]
         self.time_windows = [central_store['time_window']] + [store['time_window'] for store in stores]
-        
+
         if mode != 'haversine':
             self.gmaps = googlemaps.Client(key=os.environ.get('API_KEY'))
 
@@ -215,7 +215,7 @@ class LogisticOptimizer(object):
         routing = self._add_time_window_dimention(routing)
         routing = self._add_capacity_dimention(routing)
 
-       # Allow to drop nodes.
+        # Allow to drop nodes.
         for node in range(1, len(self.total_locations)):
             routing.AddDisjunction([self.manager.NodeToIndex(node)], MAX_WEIGHT)
 
@@ -279,7 +279,7 @@ class LogisticOptimizer(object):
         -------
         Rounting with added time window dimention.
         """
-        
+
         transit_callback_index = routing.RegisterTransitCallback(self.time_callback)
 
         # Define cost of each arc.
@@ -298,7 +298,7 @@ class LogisticOptimizer(object):
         # Add time window constraints for each location except depot.
         for location_idx, time_window in enumerate(self.time_windows):
             if location_idx == 0:
-                continue    
+                continue
             index = self.manager.NodeToIndex(location_idx)
             time_dimension.CumulVar(index).SetRange(time_window[0], time_window[1])
         # Add time window constraints for each vehicle start node.
@@ -315,7 +315,6 @@ class LogisticOptimizer(object):
                 time_dimension.CumulVar(routing.End(i)))
 
         return routing
-
 
     def _create_search_parameters(self):
         """
