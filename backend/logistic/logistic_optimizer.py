@@ -14,42 +14,36 @@ from logistic.config import MAX_WEIGHT
 class LogisticOptimizer(object):
 
     def __init__(self,
-                 central_store: Tuple[float, float],
-                 locations: List[Tuple[float, float]],
-                 stores_demands: List[int],
-                 amount_of_couriers: int,
-                 couriers_capacities: List[int],
-                 time_windows: List[Tuple[int, int]],
+                 central_store: Dict,
+                 stores: List[Dict],
+                 couriers: List[Dict],
                  mode: str = 'driving'):
         """
         Class for scheduling delivery process
 
         Parameters
         ----------
-        central_store: Tuple[float]
-           Location of store from each delivery process starts in format (lat, lon)
-        locations: List[Tuple[float, float]]
-            List of all delivery points in format [(lat, lon).....]
-        stores_demands: List[int]
-            List of demands of each store
-        amount_of_couriers: int
-            Amount of couriers
-        couriers_capacities: List[int]
-            List of capacities of each courier
-        time_windows: List[Tuple[int, int]]
-            List of time windows, one window for each store
-       mode: str
+        central_store: Dict
+           Central store (HQ or a starting point) with all info
+        stores: List[Dict]
+            List of stores with all their info
+        couriers: List[Dict]
+            List of couriers with all their info
+        mode: str
             Mode that is using for calculating graph weights.
             There can be several modes that is supported: "driving", "walking", "bicycling", "transit", "haversine"
         """
-        self.total_locations = [central_store] + locations
-        self.stores_demands = [0] + stores_demands
-        self.amount_of_couriers = amount_of_couriers
-        self.couriers_capacities = couriers_capacities
-        self.time_windows = time_windows
+        self.central_store = central_store
+        self.stores = stores
+        self.couriers = couriers
         self.mode = mode
-        
 
+        self.total_locations = [central_store['location']] + [store['location'] for store in stores]
+        self.stores_demands = [0] + [store['demand'] for store in stores]
+        self.amount_of_couriers = len(couriers)
+        self.couriers_capacities = [courier['capacity'] for courier in couriers]
+        self.time_windows = [central_store['time_window']] + [store['time_window'] for store in stores]
+        
         if mode != 'haversine':
             self.gmaps = googlemaps.Client(key=os.environ.get('API_KEY'))
 

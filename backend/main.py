@@ -16,12 +16,9 @@ def main_page():
     """
 
     data = request.get_json(force=True)
-    model = LogisticOptimizer(central_store=tuple(data['head_location']),
-                              locations=[(x[0], x[1]) for x in data['stores_locations']],
-                              stores_demands=data['stores_demands'],
-                              amount_of_couriers=data['amount_of_couriers'],
-                              couriers_capacities=data['couriers_capacities'],
-                              time_windows=data['time_windows'],
+    model = LogisticOptimizer(central_store=data['central_store'],
+                              stores=data['stores'],
+                              couriers=data['couriers'],
                               mode='haversine')
     result = model.solve()['routes']
     result = [list(x) for x in result]

@@ -6,7 +6,7 @@ def main():
     
     url = "http://0.0.0.0:8080/"
 
-    with open('test.json') as f:
+    with open('example.json') as f:
         data = json.load(f)
 
     results = requests.post(url, json=data)
