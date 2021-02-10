@@ -209,10 +209,7 @@ class LogisticOptimizer(object):
         """
         routing = pywrapcp.RoutingModel(self.manager)
 
-        routing = self._add_distance_dimention(routing)
-
-        if self.time_constraint:
-            routing = self._add_time_window_dimention(routing)
+        routing = self._add_time_dimention(routing)
 
         if self.capacities_constraint:
             routing = self._add_capacity_dimention(routing)
@@ -226,33 +223,6 @@ class LogisticOptimizer(object):
         solution = routing.SolveWithParameters(search_parameters)
 
         return self.decode_solution(solution=solution, routing=routing)
-
-    def _add_distance_dimention(self, routing):
-        """
-        Method for adding distance dimention to routing.
-        Returns
-        -------
-        Rounting with added distance dimention.
-        """
-
-        transit_callback_index = routing.RegisterTransitCallback(self.time_callback)
-
-        # Define cost of each arc.
-        routing.SetArcCostEvaluatorOfAllVehicles(transit_callback_index)
-
-        # Add Distance constraint.
-        dimension_name = 'Distance'
-        routing.AddDimension(
-            transit_callback_index,
-            0,  # no slack
-            MAX_WEIGHT,  # vehicle maximum travel weight
-            True,  # start cumul to zero
-            dimension_name)
-
-        distance_dimension = routing.GetDimensionOrDie(dimension_name)
-        distance_dimension.SetGlobalSpanCostCoefficient(100)
-
-        return routing
 
     def _add_capacity_dimention(self, routing):
         """
@@ -274,7 +244,7 @@ class LogisticOptimizer(object):
 
         return routing
 
-    def _add_time_window_dimention(self, routing):
+    def _add_time_dimention(self, routing):
         """
         Method for adding time window dimention to routing.
         Returns
@@ -291,30 +261,32 @@ class LogisticOptimizer(object):
         dimension_name = 'Time'
         routing.AddDimension(
             transit_callback_index,
-            MAX_WEIGHT,  # allow waiting time
+            MAX_WEIGHT if self.time_constraint else 0,  # allow waiting time
             self.max_duration_of_trip,  # maximum time per vehicle
-            False,  # Don't force start cumul to zero.
+            False if self.time_constraint else True,  # Don't force start cumul to zero.
             dimension_name)
 
         time_dimension = routing.GetDimensionOrDie(dimension_name)
-        # Add time window constraints for each location except depot.
-        for location_idx, time_window in enumerate(self.time_windows):
-            if location_idx == 0:
-                continue
-            index = self.manager.NodeToIndex(location_idx)
-            time_dimension.CumulVar(index).SetRange(time_window[0], time_window[1])
-        # Add time window constraints for each vehicle start node.
-        for vehicle_id in range(self.amount_of_couriers):
-            index = routing.Start(vehicle_id)
-            time_dimension.CumulVar(index).SetRange(self.time_windows[0][0],
-                                                    self.time_windows[0][1])
 
-        # Instantiate route start and end times to produce feasible times.
-        for i in range(self.amount_of_couriers):
-            routing.AddVariableMinimizedByFinalizer(
-                time_dimension.CumulVar(routing.Start(i)))
-            routing.AddVariableMinimizedByFinalizer(
-                time_dimension.CumulVar(routing.End(i)))
+        # Add time window constraints for each location except depot.
+        if self.time_constraint:
+            for location_idx, time_window in enumerate(self.time_windows):
+                if location_idx == 0:
+                    continue
+                index = self.manager.NodeToIndex(location_idx)
+                time_dimension.CumulVar(index).SetRange(time_window[0], time_window[1])
+            # Add time window constraints for each vehicle start node.
+            for vehicle_id in range(self.amount_of_couriers):
+                index = routing.Start(vehicle_id)
+                time_dimension.CumulVar(index).SetRange(self.time_windows[0][0],
+                                                        self.time_windows[0][1])
+
+            # Instantiate route start and end times to produce feasible times.
+            for i in range(self.amount_of_couriers):
+                routing.AddVariableMinimizedByFinalizer(
+                    time_dimension.CumulVar(routing.Start(i)))
+                routing.AddVariableMinimizedByFinalizer(
+                    time_dimension.CumulVar(routing.End(i)))
 
         return routing
 
