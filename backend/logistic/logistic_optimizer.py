@@ -1,51 +1,69 @@
 from typing import List, Tuple, Dict, Union
-from haversine import haversine
 from itertools import combinations
 from cached_property import cached_property
 import googlemaps
 import os
+import time
 import ortools
 from ortools.constraint_solver import routing_enums_pb2
 from ortools.constraint_solver import pywrapcp
 
-from logistic.config import MAX_WEIGHT
+from logistic.config import MAX_WEIGHT, SOLUTION_CALCULATION_MAX_TIME
+from logistic.utils import duration_approximation
 
 
 class LogisticOptimizer(object):
 
     def __init__(self,
-                 central_store: Dict,
-                 stores: List[Dict],
-                 couriers: List[Dict],
-                 mode: str = 'driving'):
+                 central_store: Dict[str, Union[Tuple[float, float], Tuple[int, int]]],
+                 stores: List[Dict[str, Union[Tuple[float, float], int, Tuple[int, int]]]],
+                 couriers: List[Dict[str, Union[str, int]]],
+                 max_duration_of_trip: float = MAX_WEIGHT,
+                 approximation: bool = True):
         """
         Class for scheduling delivery process
 
         Parameters
         ----------
-        central_store: Dict
+        central_store: Dict[str, Union[Tuple[float, float], Tuple[int, int]]]
            Central store (HQ or a starting point) with all info
-        stores: List[Dict]
+           Examples: {"location": [50.486228, 30.472595], "time_window": [0, 1]} or {"location": [50.486228, 30.472595]}
+        stores: List[Dict[str, Union[Tuple[float, float], int, Tuple[int, int]]]]
             List of stores with all their info
-        couriers: List[Dict]
+                Examples:  [ {"location": [50.489023, 30.467676], "demand": 1, "time_window": [0, 1] }]
+                        OR [ {"location": [50.489023, 30.467676], "time_window": [0, 1] }]
+                        OR [ {"location": [50.489023, 30.467676], "demand": 1 }]
+        couriers: List[Dict[str, Union[str, int]]]
             List of couriers with all their info
-        mode: str
-            Mode that is using for calculating graph weights.
-            There can be several modes that is supported: "driving", "walking", "bicycling", "transit", "haversine"
+            Examples: [{"capacity": 2, "transport": "foot"}] OR [{"transport": "foot"}]
+        approximation: bool
+            False if we don't use Google API, True otherwise
         """
+        self.time_constraint = (True if 'time_window' in central_store.keys()
+                                        or any(['time_window' in x.keys() for x in stores]) else False)
+        self.capacities_constraint = True if any(['demand' in x.keys() for x in stores]) else False
         self.central_store = central_store
         self.stores = stores
         self.couriers = couriers
-        self.mode = mode
+
+        # There can be several modes that is supported: "driving", "walking", "bicycling", "transit"
+        self.mode = couriers[0]['transport']  # TODO Add processing for different transport types for different couriers
 
         self.total_locations = [central_store['location']] + [store['location'] for store in stores]
-        self.stores_demands = [0] + [store['demand'] for store in stores]
         self.amount_of_couriers = len(couriers)
-        self.couriers_capacities = [courier['capacity'] for courier in couriers]
-        self.time_windows = [central_store['time_window']] + [store['time_window'] for store in stores]
+        self.max_duration_of_trip = max_duration_of_trip
 
-        if mode != 'haversine':
+        if self.capacities_constraint:
+            self.stores_demands = [0] + [store.get('demand', 0) for store in stores]
+            self.couriers_capacities = [courier.get('capacity', 0) for courier in couriers]
+
+        if self.time_constraint:
+            self.time_windows = ([central_store.get('time_window', [int(time.time()), MAX_WEIGHT])]
+                                 + [store.get('time_window', [int(time.time()), MAX_WEIGHT]) for store in stores])
+
+        if not approximation:
             self.gmaps = googlemaps.Client(key=os.environ.get('API_KEY'))
+        self.approximation = approximation
 
         # Create the routing index manager.
         self.manager = pywrapcp.RoutingIndexManager(len(self.total_locations), self.amount_of_couriers, 0)
@@ -65,11 +83,11 @@ class LogisticOptimizer(object):
         points_to_weight = {(i, i): 0 for i in range(len(self.total_locations))}
 
         for point_1, point_2 in combinations(enumerate(self.total_locations), 2):
-            if self.mode == 'haversine':
-                hv = haversine(point_1[1], point_2[1])
+            if self.approximation:
+                duration = duration_approximation(point_1=point_1[1], point_2=point_2[1], mode=self.mode)
                 points_to_weight.update({
-                    (point_1[0], point_2[0]): hv,
-                    (point_2[0], point_1[0]): hv
+                    (point_1[0], point_2[0]): duration,
+                    (point_2[0], point_1[0]): duration
                 })
 
             else:
@@ -93,26 +111,6 @@ class LogisticOptimizer(object):
                 })
 
         return points_to_weight
-
-    def weight_callback(self, from_index, to_index) -> float:
-        """
-        Returns the weight between the two nodes.
-
-        Parameters
-        ----------
-        from_index
-        to_index
-
-        Returns
-        -------
-        float
-            Weight of node (route)
-
-        """
-        # Convert from routing variable Index to distance matrix NodeIndex.
-        from_node = self.manager.IndexToNode(from_index)
-        to_node = self.manager.IndexToNode(to_index)
-        return self.road_to_weight[(from_node, to_node)]
 
     def demand_callback(self, from_index) -> int:
         """
@@ -212,8 +210,12 @@ class LogisticOptimizer(object):
         routing = pywrapcp.RoutingModel(self.manager)
 
         routing = self._add_distance_dimention(routing)
-        routing = self._add_time_window_dimention(routing)
-        routing = self._add_capacity_dimention(routing)
+
+        if self.time_constraint:
+            routing = self._add_time_window_dimention(routing)
+
+        if self.capacities_constraint:
+            routing = self._add_capacity_dimention(routing)
 
         # Allow to drop nodes.
         for node in range(1, len(self.total_locations)):
@@ -233,7 +235,7 @@ class LogisticOptimizer(object):
         Rounting with added distance dimention.
         """
 
-        transit_callback_index = routing.RegisterTransitCallback(self.weight_callback)
+        transit_callback_index = routing.RegisterTransitCallback(self.time_callback)
 
         # Define cost of each arc.
         routing.SetArcCostEvaluatorOfAllVehicles(transit_callback_index)
@@ -289,8 +291,8 @@ class LogisticOptimizer(object):
         dimension_name = 'Time'
         routing.AddDimension(
             transit_callback_index,
-            30,  # allow waiting time
-            30,  # maximum time per vehicle
+            MAX_WEIGHT,  # allow waiting time
+            self.max_duration_of_trip,  # maximum time per vehicle
             False,  # Don't force start cumul to zero.
             dimension_name)
 
@@ -331,10 +333,10 @@ class LogisticOptimizer(object):
             routing_enums_pb2.FirstSolutionStrategy.PATH_CHEAPEST_ARC)
 
         # capacity search parameter
-        search_parameters.local_search_metaheuristic = (
-            routing_enums_pb2.LocalSearchMetaheuristic.GUIDED_LOCAL_SEARCH)
-
-        search_parameters.time_limit.FromSeconds(1)
+        if self.capacities_constraint:
+            search_parameters.local_search_metaheuristic = (
+                routing_enums_pb2.LocalSearchMetaheuristic.GUIDED_LOCAL_SEARCH)
+            search_parameters.time_limit.FromSeconds(SOLUTION_CALCULATION_MAX_TIME)
 
         return search_parameters
 

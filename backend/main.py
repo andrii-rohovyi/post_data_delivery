@@ -19,9 +19,9 @@ def main_page():
     model = LogisticOptimizer(central_store=data['central_store'],
                               stores=data['stores'],
                               couriers=data['couriers'],
-                              mode='haversine')
-    result = model.solve()['routes']
-    result = [list(x) for x in result]
+                              max_duration_of_trip=data['max_duration_of_trip'],
+                              approximation=False)
+    result = model.solve()
 
     return jsonify(result)
 
