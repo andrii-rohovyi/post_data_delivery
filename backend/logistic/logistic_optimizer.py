@@ -1,4 +1,4 @@
-from typing import List, Tuple, Dict, Union
+from typing import List, Tuple, Dict, Union, Optional
 from itertools import combinations
 from cached_property import cached_property
 import googlemaps
@@ -18,6 +18,7 @@ class LogisticOptimizer(object):
                  central_store: Dict[str, Union[Tuple[float, float], Tuple[int, int]]],
                  stores: List[Dict[str, Union[Tuple[float, float], int, Tuple[int, int]]]],
                  couriers: List[Dict[str, Union[str, int]]],
+                 max_duration_of_trip: Optional[float] = None,
                  approximation: bool = True):
         """
         Class for scheduling delivery process
@@ -50,6 +51,7 @@ class LogisticOptimizer(object):
 
         self.total_locations = [central_store['location']] + [store['location'] for store in stores]
         self.amount_of_couriers = len(couriers)
+        self.max_duration_of_trip = MAX_WEIGHT if not max_duration_of_trip else int(time.time()) + max_duration_of_trip
 
         if self.capacities_constraint:
             self.stores_demands = [0] + [store.get('demand', 0) for store in stores]
@@ -265,6 +267,9 @@ class LogisticOptimizer(object):
             dimension_name)
 
         time_dimension = routing.GetDimensionOrDie(dimension_name)
+        for v_idx in range(self.amount_of_couriers):
+            print(routing.End(v_idx))
+            time_dimension.CumulVar(routing.End(v_idx)).SetMax(self.max_duration_of_trip)
 
         # Add time window constraints for each location except depot.
         if self.time_constraint:
