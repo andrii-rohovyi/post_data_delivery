@@ -56,9 +56,9 @@ class LogisticOptimizer(object):
             self.couriers_capacities = [courier.get('capacity', 0) for courier in couriers]
 
         if self.time_constraint:
-            self.time_windows = ([central_store.get('time_window', [int(time.time()), MAX_WEIGHT])]
+            self.time_windows = ([[int(time.time()), MAX_WEIGHT]]
                                  + [store.get('time_window', [int(time.time()), MAX_WEIGHT]) for store in stores]
-                                 + [[int(time.time()), MAX_WEIGHT]]  # add fake store
+                                 + [central_store.get('time_window', [int(time.time()), MAX_WEIGHT])]  # add fake store
                                  )
 
         if not approximation:
