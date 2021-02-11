@@ -22,6 +22,7 @@ class GoogleQuerying(object):
             There can be several modes that is supported: "driving", "walking", "bicycling", "transit", "haversine"
         """
         self.mode = mode
+        self.session = aiohttp.ClientSession()
 
     async def fetch(self,
                     client: aiohttp.ClientSession,
@@ -63,8 +64,7 @@ class GoogleQuerying(object):
         -------
 
         """
-        async with aiohttp.ClientSession() as session:
-            return await self.fetch(session, points)
+        return await self.fetch(self.session, points)
 
     async def query_google(self,
                            points_connections: List[Tuple[Tuple[float, float], Tuple[float, float]]]
@@ -86,6 +86,8 @@ class GoogleQuerying(object):
 
         """
         returns = await asyncio.gather(*[self.call_api(points) for points in points_connections])
+        await self.session.close()
+
         return returns
 
     def duration_calculation(self, points_connections: List[Tuple[float, float]]) -> Dict[Tuple[float, float], float]:
