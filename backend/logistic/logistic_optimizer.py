@@ -42,31 +42,35 @@ class LogisticOptimizer(object):
         self.time_constraint = (True if 'time_window' in central_store.keys()
                                         or any(['time_window' in x.keys() for x in stores]) else False)
         self.capacities_constraint = True if any(['demand' in x.keys() for x in stores]) else False
-        self.central_store = central_store
-        self.stores = stores
-        self.couriers = couriers
 
         # There can be several modes that is supported: "driving", "walking", "bicycling", "transit"
         self.mode = couriers[0]['transport']  # TODO Add processing for different transport types for different couriers
 
-        self.total_locations = [central_store['location']] + [store['location'] for store in stores]
+        self.locations = [central_store['location']] + [store['location'] for store in stores]
+        self.locations_amount = len(self.locations)
         self.amount_of_couriers = len(couriers)
         self.max_duration_of_trip = MAX_WEIGHT if not max_duration_of_trip else int(time.time()) + max_duration_of_trip
 
         if self.capacities_constraint:
-            self.stores_demands = [0] + [store.get('demand', 0) for store in stores]
+            self.locations_demands = [0] + [store.get('demand', 0) for store in stores] + [0]
             self.couriers_capacities = [courier.get('capacity', 0) for courier in couriers]
 
         if self.time_constraint:
             self.time_windows = ([central_store.get('time_window', [int(time.time()), MAX_WEIGHT])]
-                                 + [store.get('time_window', [int(time.time()), MAX_WEIGHT]) for store in stores])
+                                 + [store.get('time_window', [int(time.time()), MAX_WEIGHT]) for store in stores]
+                                 + [[int(time.time()), MAX_WEIGHT]]  # add fake store
+                                 )
 
         if not approximation:
             self.gmaps = googlemaps.Client(key=os.environ.get('API_KEY'))
         self.approximation = approximation
 
         # Create the routing index manager.
-        self.manager = pywrapcp.RoutingIndexManager(len(self.total_locations), self.amount_of_couriers, 0)
+        self.manager = pywrapcp.RoutingIndexManager(self.locations_amount + 1,
+                                                    self.amount_of_couriers,
+                                                    [0] * self.amount_of_couriers,
+                                                    [self.locations_amount] * self.amount_of_couriers
+                                                    )
 
     @cached_property
     def road_to_weight(self) -> Dict[Tuple[Tuple[float, float], Tuple[float, float]], float]:
@@ -80,9 +84,13 @@ class LogisticOptimizer(object):
             Example: ((0, 0), (45, 45)) : 2
 
         """
-        points_to_weight = {(i, i): 0 for i in range(len(self.total_locations))}
+        points_to_weight = {(i, i): 0 for i in range(self.locations_amount + 1)}
 
-        for point_1, point_2 in combinations(enumerate(self.total_locations), 2):
+        # add fake location
+        points_to_weight.update({(i, self.locations_amount): 0 for i in range(self.locations_amount)})
+        points_to_weight.update({(self.locations_amount, i): 0 for i in range(self.locations_amount)})
+
+        for point_1, point_2 in combinations(enumerate(self.locations), 2):
             if self.approximation:
                 duration = duration_approximation(point_1=point_1[1], point_2=point_2[1], mode=self.mode)
                 points_to_weight.update({
@@ -128,7 +136,7 @@ class LogisticOptimizer(object):
         """
         # Convert from routing variable Index to demands NodeIndex.
         from_node = self.manager.IndexToNode(from_index)
-        return self.stores_demands[from_node]
+        return self.locations_demands[from_node]
 
     def time_callback(self, from_index, to_index) -> float:
         """
@@ -178,7 +186,7 @@ class LogisticOptimizer(object):
             if routing.IsStart(node) or routing.IsEnd(node):
                 continue
             if solution.Value(routing.NextVar(node)) == node:
-                dropped_nodes.append(self.total_locations[self.manager.IndexToNode(node)])
+                dropped_nodes.append(self.locations[self.manager.IndexToNode(node)])
 
         # calculate route for deliveryman
         routes = []
@@ -186,7 +194,7 @@ class LogisticOptimizer(object):
             index = routing.Start(vehicle_id)
             route = []
             while not routing.IsEnd(index):
-                route.append(self.total_locations[self.manager.IndexToNode(index)])
+                route.append(self.locations[self.manager.IndexToNode(index)])
                 index = solution.Value(routing.NextVar(index))
 
             if len(route) > 1:
@@ -215,7 +223,7 @@ class LogisticOptimizer(object):
             routing = self._add_capacity_dimention(routing)
 
         # Allow to drop nodes.
-        for node in range(1, len(self.total_locations)):
+        for node in range(1, self.locations_amount):
             routing.AddDisjunction([self.manager.NodeToIndex(node)], MAX_WEIGHT)
 
         search_parameters = self._create_search_parameters()
@@ -262,27 +270,25 @@ class LogisticOptimizer(object):
         routing.AddDimension(
             transit_callback_index,
             MAX_WEIGHT if self.time_constraint else 0,  # allow waiting time
-            MAX_WEIGHT,  # maximum time per vehicle
+            self.max_duration_of_trip,  # maximum time per vehicle
             False if self.time_constraint else True,  # Don't force start cumul to zero.
             dimension_name)
 
         time_dimension = routing.GetDimensionOrDie(dimension_name)
-        for v_idx in range(self.amount_of_couriers):
-            print(routing.End(v_idx))
-            time_dimension.CumulVar(routing.End(v_idx)).SetMax(self.max_duration_of_trip)
 
         # Add time window constraints for each location except depot.
         if self.time_constraint:
             for location_idx, time_window in enumerate(self.time_windows):
-                if location_idx == 0:
+                if (location_idx == 0) or (location_idx == self.locations_amount):
                     continue
+
                 index = self.manager.NodeToIndex(location_idx)
                 time_dimension.CumulVar(index).SetRange(time_window[0], time_window[1])
             # Add time window constraints for each vehicle start node.
             for vehicle_id in range(self.amount_of_couriers):
                 index = routing.Start(vehicle_id)
                 time_dimension.CumulVar(index).SetRange(self.time_windows[0][0],
-                                                        self.time_windows[0][1])
+                                                        self.time_windows[self.locations_amount][1])
 
             # Instantiate route start and end times to produce feasible times.
             for i in range(self.amount_of_couriers):
