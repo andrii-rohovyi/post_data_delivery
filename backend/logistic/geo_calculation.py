@@ -50,7 +50,6 @@ class GoogleQuerying(object):
             return await resp.json()
 
     async def call_api(self,
-                       sem: asyncio.locks.Semaphore,
                        points: Tuple[Tuple[float, float], Tuple[float, float]]
                        ) -> Coroutine[Any, Any, Any]:
         """
@@ -58,16 +57,14 @@ class GoogleQuerying(object):
 
         Parameters
         ----------
-        sem: asyncio.locks.Semaphore
         points: Tuple[Tuple[float, float], Tuple[float, float]]
             Points between each we need to query Directions API
         Returns
         -------
 
         """
-        async with sem:
-            async with aiohttp.ClientSession() as session:
-                return await self.fetch(session, points)
+        async with aiohttp.ClientSession() as session:
+            return await self.fetch(session, points)
 
     async def query_google(self,
                            points_connections: List[Tuple[Tuple[float, float], Tuple[float, float]]]
@@ -88,8 +85,7 @@ class GoogleQuerying(object):
         -------
 
         """
-        sem = asyncio.Semaphore(100)
-        returns = await asyncio.gather(*[self.call_api(sem, points) for points in points_connections])
+        returns = await asyncio.gather(*[self.call_api(points) for points in points_connections])
         return returns
 
     def duration_calculation(self, points_connections: List[Tuple[float, float]]) -> Dict[Tuple[float, float], float]:
