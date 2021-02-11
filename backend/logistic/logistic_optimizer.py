@@ -18,7 +18,6 @@ class LogisticOptimizer(object):
                  central_store: Dict[str, Union[Tuple[float, float], Tuple[int, int]]],
                  stores: List[Dict[str, Union[Tuple[float, float], int, Tuple[int, int]]]],
                  couriers: List[Dict[str, Union[str, int]]],
-                 max_duration_of_trip: float = MAX_WEIGHT,
                  approximation: bool = True):
         """
         Class for scheduling delivery process
@@ -35,7 +34,7 @@ class LogisticOptimizer(object):
                         OR [ {"location": [50.489023, 30.467676], "demand": 1 }]
         couriers: List[Dict[str, Union[str, int]]]
             List of couriers with all their info
-            Examples: [{"capacity": 2, "transport": "foot"}] OR [{"transport": "foot"}]
+            Examples: [{"capacity": 2, "transport": "walking"}] OR [{"transport": "walking"}]
         approximation: bool
             False if we don't use Google API, True otherwise
         """
@@ -51,7 +50,6 @@ class LogisticOptimizer(object):
 
         self.total_locations = [central_store['location']] + [store['location'] for store in stores]
         self.amount_of_couriers = len(couriers)
-        self.max_duration_of_trip = max_duration_of_trip
 
         if self.capacities_constraint:
             self.stores_demands = [0] + [store.get('demand', 0) for store in stores]
@@ -262,7 +260,7 @@ class LogisticOptimizer(object):
         routing.AddDimension(
             transit_callback_index,
             MAX_WEIGHT if self.time_constraint else 0,  # allow waiting time
-            self.max_duration_of_trip,  # maximum time per vehicle
+            MAX_WEIGHT,  # maximum time per vehicle
             False if self.time_constraint else True,  # Don't force start cumul to zero.
             dimension_name)
 
