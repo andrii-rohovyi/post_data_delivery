@@ -3,6 +3,9 @@ import React from "react";
 import { Form, Field } from 'react-final-form'
 import arrayMutators from 'final-form-arrays';
 import { FieldArray } from 'react-final-form-arrays'
+import {InputNumberComponent} from "./ui/InputNumberComponent";
+import {InputComponent} from "./ui/Input";
+import { CloseOutlined } from "@ant-design/icons";
 
 
 type PointType = {
@@ -23,7 +26,6 @@ type Values = {
     deliveryman_cnt: number
 }
 
-type PointArrType = [number, number];
 
 export const AddPointForm: React.FC<Props> = ({
   points,
@@ -34,8 +36,6 @@ export const AddPointForm: React.FC<Props> = ({
 }) => {
 
     const onSubmit = async (values: Values) => {
-      // console.log(points, values.points.slice(1, values.points.length));
-      // addPoint(points.concat(values.points.slice(1, values.points.length)));
       const data = {
           deliveryman_cnt: Number(values.deliveryman_cnt),
           head_location: Object.values(values.points[0]),
@@ -53,15 +53,8 @@ export const AddPointForm: React.FC<Props> = ({
         body: JSON.stringify(data)
       });
 
-      console.log(rawResponse);
-      const content: PointArrType[][] = await rawResponse.json();
-      const res: PointType[][] = new Array(content.length).fill([]);
-      console.log(content, 'content');
-      content.map((courierPoints, count) => courierPoints.map((point) => res[count].push({
-              lat: point[0],
-              lng: point[1]
-      })))
-      setResult(res);
+      const content: PointType[][] = await rawResponse.json();
+      setResult(content);
       setShowResult(true)
     }
     return (
@@ -88,7 +81,7 @@ export const AddPointForm: React.FC<Props> = ({
                       <label>Delivery Man {' '}</label>
                     <Field
                       name='deliveryman_cnt'
-                      component="input"
+                      component={InputNumberComponent}
                       type="number"
                       placeholder="Delivery Man Count"
                     />
@@ -99,20 +92,24 @@ export const AddPointForm: React.FC<Props> = ({
                         <label>Point #{index + 1}</label>
                         <Field
                           name={`${name}.lat`}
-                          component="input"
+                          component={InputComponent}
                           placeholder="Lat"
+                          disabled={index === 0}
+                          style={{width: "40%", marginRight: "5px"}}
                         />
                         <Field
                           name={`${name}.lng`}
-                          component="input"
+                          component={InputComponent}
                           placeholder="Lon"
+                          disabled={index === 0}
+                          style={{width: "40%", marginLeft: "5px"}}
                         />
-                        <span
-                          onClick={() => fields.remove(index)}
-                          style={{ cursor: 'pointer' }}
-                        >
-                            {' '} ❌
-                        </span>
+                            <span
+                                onClick={() => index !== 0 ? fields.remove(index) : {}}
+                                style={{cursor: index !== 0 ? 'pointer' : 'not-allowed', marginLeft: "5px"}}
+                            >
+                                <CloseOutlined />
+                            </span>
                       </div>
                     ))
                   }
@@ -146,5 +143,4 @@ export const AddPointForm: React.FC<Props> = ({
     )}}
           />
     )
-
 }

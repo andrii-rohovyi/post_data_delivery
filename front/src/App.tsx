@@ -1,5 +1,6 @@
 import React, {useState} from 'react';
 import './App.css';
+import "antd/dist/antd.css";
 import SimpleMap from "./components/SimpleMap";
 import {AddPointComponent} from "./components/AddPointComponent";
 

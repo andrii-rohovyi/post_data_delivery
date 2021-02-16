@@ -26,8 +26,12 @@ def main_page():
                               mode='haversine')
     result = model.solve_delivery_problem()['routes']
     result = [list(x) for x in result]
+    print(result)
+    print(len(result[0]), len(result[1]))
+    r = [[{'lat': p[0], 'lng': p[1]} for p in points] for points in result]
+    print(r)
 
-    return jsonify(result)
+    return jsonify(r)
 
 
 if __name__ == '__main__':
