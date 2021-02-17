@@ -179,16 +179,17 @@ class LogisticOptimizer(object):
                 dropped_nodes.append(self.total_locations[self.manager.IndexToNode(node)])
 
         # calculate route for deliveryman
-        routes = []
-        for vehicle_id in range(self.amount_of_couriers):
-            index = routing.Start(vehicle_id)
+        routes = {}
+        for courier_number in range(self.amount_of_couriers):
+            index = routing.Start(courier_number)
             route = []
             while not routing.IsEnd(index):
                 route.append(self.total_locations[self.manager.IndexToNode(index)])
                 index = solution.Value(routing.NextVar(index))
 
             if len(route) > 1:
-                routes.append(route)
+                courier_id = self.couriers[courier_number]['pid']
+                routes[courier_id] = route
 
         return {'routes': routes, 'dropped_nodes': dropped_nodes}
 
