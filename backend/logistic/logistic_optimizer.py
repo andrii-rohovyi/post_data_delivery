@@ -150,7 +150,7 @@ class LogisticOptimizer(object):
     def decode_solution(self,
                         routing: ortools.constraint_solver.pywrapcp.RoutingModel,
                         solution: ortools.constraint_solver.pywrapcp.Assignment
-                        ) -> Dict[str, Union[List[Tuple[int, int]], List[List[Tuple[int, int]]]]]:
+                        ) -> Dict[str, Union[Dict[str, List[Tuple[int, int]]], List[List[Tuple[int, int]]]]]:
         """
         Decode ortools solution to REST format
 
@@ -163,10 +163,10 @@ class LogisticOptimizer(object):
 
         Returns
         -------
-        Dict[str, Union[List[Tuple[int, int]], List[List[Tuple[int, int]]]]]
-            List of routes that build for deliverymen amd list of nodes that can't be reached in this mode from
+        Dict[str, Union[Dict[str, List[Tuple[int, int]]], List[List[Tuple[int, int]]]]]
+            Dict where keys are couriers' ids and values are routes and list of nodes that can't be reached in this mode from
             central store
-            Example: {'routes': [[(0, 0), (-84, -15), (-36, 107), (-71, -4), (23, 55)]], 'dropped_nodes': [] }
+            Example: {'routes': {'aaa111': [(0,0), (1,1), (2,2)], 'bbb222': [(0,0), (1,2), (2,1)]}, 'dropped_nodes': [] }
 
         """
         # calculate dropping nodes
