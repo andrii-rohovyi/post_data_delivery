@@ -1,8 +1,10 @@
 import sys
 import logging
 from flask import Flask, request, jsonify
+import pprint
 
 from logistic import LogisticOptimizer
+
 
 app = Flask(__name__)
 logging.basicConfig(stream=sys.stdout, level=logging.ERROR)
@@ -21,7 +23,7 @@ def main_page():
                               couriers=data['couriers'],
                               approximation=False)
     print(model.mode)
-    print(model.road_to_weight)
+    pprint.pprint(model.road_to_weight)
     result = model.solve()
 
     return jsonify(result)
