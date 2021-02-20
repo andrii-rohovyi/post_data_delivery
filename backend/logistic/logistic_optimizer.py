@@ -38,6 +38,7 @@ class LogisticOptimizer(object):
         approximation: bool
             False if we don't use Google API, True otherwise
         """
+        approximation = True
         self.time_constraint = (True if 'time_window' in central_store.keys()
                                         or any(['time_window' in x.keys() for x in stores]) else False)
         self.capacities_constraint = True if any(['demand' in x.keys() for x in stores]) else False

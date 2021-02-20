@@ -1,8 +1,10 @@
-import { InputNumber } from "antd";
+import { DatePicker } from "antd";
 
-export const InputNumberComponent = ({ input, meta, ...rest }: any) => {
+const { RangePicker } = DatePicker;
+
+export const DatePickerRange = ({ input, meta, ...rest }: any) => {
     return(
-    <InputNumber
+    <RangePicker
         {...input}
         {...rest}
         min={1}

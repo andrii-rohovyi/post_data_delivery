@@ -3,7 +3,9 @@ import {AddPointForm} from "./AddPointForm";
 
 type PointType = {
   lat: number,
-  lng: number
+  lng: number,
+  demand?: number
+  time_window?: [Date, Date]
 }
 
 type Props = {
@@ -22,7 +24,7 @@ export const AddPointComponent: React.FC<Props> = ({
    setShowResult
 }) => {
     return (
-        <aside style={{ float: "left", width: "30%" }}>
+        <aside style={{ float: "left", width: "40%" }}>
         <AddPointForm
             points={points}
             addPoint={addPoint}

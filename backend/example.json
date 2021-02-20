@@ -1,5 +1,5 @@
 {
 "central_store": {"location": [50.486228, 30.472595], "time_window": [0, 1]},
 "stores": [ {"location": [50.489023, 30.467676], "demand": 1, "time_window": [0, 1] }, {"location": [50.489030, 30.472075], "demand": 2, "time_window": [2, 3]} ],
-"couriers": [{"pid": 0, "capacity": 2, "transport": "foot"}]
+"couriers": [{"pid": 0, "capacity": 2, "transport": "driving"}]
 }

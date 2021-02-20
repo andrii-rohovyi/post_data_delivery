@@ -95,7 +95,7 @@ export const SimpleMap: React.FC<Props> = ({
     }
     return (
       // Important! Always set the container height explicitly
-      <div style={{ height: '100vh', width: '70%', float: "right" }}>
+      <div style={{ height: '100vh', width: '60%', float: "right" }}>
         <GoogleMapReact
           bootstrapURLKeys={{ key: "AIzaSyCWYtTeal3a9ttpSA8HYHmgJ21k4gnVMOA" }}
           defaultCenter={center}

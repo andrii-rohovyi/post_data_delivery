@@ -6,7 +6,9 @@ import {AddPointComponent} from "./components/AddPointComponent";
 
 type PointType = {
   lat: number,
-  lng: number
+  lng: number,
+  demand?: number
+  time_window?: [Date, Date]
 }
 
 function App() {
