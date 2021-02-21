@@ -1,6 +1,6 @@
 import sys
 import logging
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS, cross_origin
 
 from logistic import LogisticOptimizer
@@ -33,6 +33,11 @@ def main_page():
     print(r)
 
     return jsonify(r)
+
+
+@app.route('/front')
+def front():
+    return render_template('index.html')
 
 
 if __name__ == '__main__':
