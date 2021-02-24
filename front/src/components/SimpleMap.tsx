@@ -1,5 +1,6 @@
 import React, {Component, useState} from 'react';
 import GoogleMapReact from 'google-map-react';
+import {ExclamationCircleOutlined} from "@ant-design/icons";
 
 type MarkerProps = {
     children?: React.ReactNode,
@@ -9,6 +10,7 @@ type MarkerProps = {
     courier?: number
     deliveryNumber?: number,
     startingPoint?: boolean
+    droppedNode?: boolean
 }
 
 //.cluster-marker {
@@ -45,25 +47,29 @@ const Marker: React.FC<MarkerProps> = ({
    text,
    deliveryNumber ,
    courier,
-   startingPoint
+   startingPoint,
+   droppedNode
 }) => (
     <>
-        <div
-          className="cluster-marker"
-          style={{
-            width: "20px",
-            height: "20px",
-            color: "#fff",
-            background: startingPoint ? "#FAD02C" : courier ? colors[courier] : "#900020",
-            borderRadius: "50%",
-            padding: "10px",
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center"
-          }}
-        >
-            {deliveryNumber}
-        </div>
+        {droppedNode ?
+            <ExclamationCircleOutlined size={20} style={{width: "20px", height: "20px"}}/> :
+            <div
+                className="cluster-marker"
+                style={{
+                    width: "20px",
+                    height: "20px",
+                    color: "#fff",
+                    background: startingPoint ? "#FAD02C" : courier ? colors[courier] : "#900020",
+                    borderRadius: "50%",
+                    padding: "10px",
+                    display: "flex",
+                    justifyContent: "center",
+                    alignItems: "center"
+                }}
+            >
+                {deliveryNumber}
+            </div>
+        }
     </>
 );
 type PointType = {
@@ -71,10 +77,15 @@ type PointType = {
   lng: number
 }
 
+type Response = {
+    routes: PointType[][],
+    dropped_nodes: PointType[][]
+}
+
 type Props = {
     points: PointType[],
     addPoint: (points: PointType[]) => void,
-    result: PointType[][],
+    result: Response,
     showResult: boolean
 }
 
@@ -102,11 +113,18 @@ export const SimpleMap: React.FC<Props> = ({
           defaultZoom={11}
           onClick={addMapPoint}
         >
+            {console.log(result, 'result')}
+            {  // {'routes': [{'lat': [50.4486941427873, 30.52272858686755], 'lng': [50.33231051081023, 30.368480777750914]}], 'dropped_nodes': [{'lat': 50.534377970341886, 'lng': 30.73514947892279}]}
+            }
+
             {showResult ?
-                result.map((courierPoints, count) => {
+                Object.entries(result).map(([node, courierPoints]) => {
                     return (
-                    courierPoints.map((point, number) => {
-                        if (count === 0 && number === 0) {
+                    courierPoints.map((points, count) => {
+                        if (node === 'routes') {
+                            return (
+                        points.map((point, number) => {
+                            if (node === 'routes' && number === 0) {
                             return (
                                 <Marker
                                     lat={point.lat}
@@ -117,16 +135,36 @@ export const SimpleMap: React.FC<Props> = ({
                             )
                         }
                         else if (number !== 0) {
-                            return (
-                              <Marker
-                                lat={point.lat}
-                                lng={point.lng}
-                                text={`Courier ${count} number ${number}`}
-                                courier={count}
-                                deliveryNumber={number}
-                              />
-                            )}
+                                return (
+                                    <Marker
+                                        lat={point.lat}
+                                        lng={point.lng}
+                                        text={`Courier ${count} number ${number}`}
+                                        courier={count}
+                                        deliveryNumber={number}
+                                    />
+                                )
+                            }
                         return <></>
+
+                        }))
+                        }
+                        else if (node === 'dropped_nodes') {
+                            return (
+                                <Marker
+                                    // @ts-ignore
+                                    lat={points.lat}
+                                    // @ts-ignore
+                                    lng={points.lng}
+                                    text="Starting Point"
+                                    startingPoint={true}
+                                    droppedNode={true}
+                                />
+                            )
+                        }
+                        return <></>
+                    // }
+                    //     return <></>
                     }))
                     }) :
                 points.map((point, count) => (

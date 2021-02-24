@@ -28,9 +28,10 @@ def main_page():
     print(model.road_to_weight)
     result = model.solve()
     print(result)
-    routes = result.get('routes', [])
-    r = [[{'lat': p[0], 'lng': p[1]} for p in points] for points in routes]
-    print(r)
+    r = {
+        'routes': [[{'lat': p[0], 'lng': p[1]} for p in point] for point in result.get('routes', [])],
+        'dropped_nodes': [{'lat': p[0], 'lng': p[1]} for p in result.get('dropped_nodes', [])]
+    }
 
     return jsonify(r)
 

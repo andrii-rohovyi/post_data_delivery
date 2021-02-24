@@ -11,12 +11,17 @@ type PointType = {
   time_window?: [Date, Date]
 }
 
+type Response = {
+    routes: PointType[][],
+    dropped_nodes: PointType[][]
+}
+
 function App() {
   const [points, addPoint] = useState<PointType[]>([{
   lat: 50.4486941427873,
   lng: 30.52272858686755
   }]);
-  const [result, setResult] = useState<PointType[][]>([]);
+  const [result, setResult] = useState<Response>({routes: [], dropped_nodes: []});
   const [showResult, setShowResult] = useState(false);
   return (
     <div className="App">

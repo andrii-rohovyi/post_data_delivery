@@ -8,11 +8,17 @@ type PointType = {
   time_window?: [Date, Date]
 }
 
+type Response = {
+    routes: PointType[][],
+    dropped_nodes: PointType[][]
+}
+
+
 type Props = {
     points: PointType[],
     addPoint: (points: PointType[]) => void,
-    result: PointType[][],
-    setResult: (points: PointType[][]) => void
+    result: Response,
+    setResult: (points: Response) => void
     setShowResult: (showResult: boolean) => void
 }
 

@@ -20,8 +20,8 @@ type PointType = {
 type Props = {
     points: PointType[],
     addPoint: (points: PointType[]) => void,
-    result: PointType[][],
-    setResult: (points: PointType[][]) => void
+    result: Response,
+    setResult: (points: Response) => void
     setShowResult: (showResult: boolean) => void
 }
 
@@ -41,6 +41,11 @@ type Values = {
 // lng: 30.52272858686755
 //
 // time_window: Array [ {…}, {…} ]
+
+type Response = {
+    routes: PointType[][],
+    dropped_nodes: PointType[][]
+}
 
 
 //"stores": [ {"location": [50.489023, 30.467676], "demand": 1, "time_window": [0, 1] }, {"location": [50.489030, 30.472075], "demand": 2, "time_window": [2, 3]} ],
@@ -92,7 +97,7 @@ export const AddPointForm: React.FC<Props> = ({
         body: JSON.stringify(data)
       });
 
-      const content: PointType[][] = await rawResponse.json();
+      const content: Response = await rawResponse.json();
       setResult(content);
       setShowResult(true)
     }
