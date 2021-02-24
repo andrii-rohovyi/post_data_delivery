@@ -1,5 +1,5 @@
 from typing import List, Tuple, Dict, Union
-from itertools import combinations
+from itertools import combinations, chain
 from cached_property import cached_property
 import googlemaps
 import os
@@ -39,8 +39,7 @@ class LogisticOptimizer(object):
             False if we don't use Google API, True otherwise
         """
         approximation = True
-        self.time_constraint = (True if 'time_window' in central_store.keys()
-                                        or any(['time_window' in x.keys() for x in stores]) else False)
+        self.time_constraint = any([bool(point.get('time_window')) for point in chain([central_store], stores)])
         self.capacities_constraint = True if any(['demand' in x.keys() for x in stores]) else False
         self.central_store = central_store
         self.stores = stores

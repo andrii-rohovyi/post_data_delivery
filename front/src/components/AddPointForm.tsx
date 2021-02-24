@@ -215,7 +215,7 @@ export const AddPointForm: React.FC<Props> = ({
                         <Field
                           name={`${name}.transport`}
                           component={SelectComponent}
-                          options={['driving', 'foot']}
+                          options={['driving', 'walking', 'bicycling', 'transit']}
                           placeholder="Transport"
                           style={{width: "40%", marginRight: "5px"}}
                         />
