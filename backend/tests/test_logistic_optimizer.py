@@ -21,7 +21,7 @@ class TestLogisticOptimizer(TestCase):
         self.assertTrue([(50.45, 30.51), (50.485212, 30.505732)] in solution['routes'].values())
         self.assertTrue([(50.45, 30.51), (50.450190, 30.502826), (50.46, 30.49)] in solution['routes'].values())
 
-    def test_that_we_dropped_nodes_were_demand_is_not_satisfied(self):
+    def test_that_we_dropped_nodes_where_demand_is_not_satisfied(self):
         central_store = {'location': (50.45, 30.51)}
 
         locations = [{'location': (50.46, 30.49), "demand": 1}, {'location': (50.485212, 30.505732), "demand": 3},
