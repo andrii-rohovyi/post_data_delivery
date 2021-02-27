@@ -7,7 +7,7 @@ from logistic import LogisticOptimizer
 
 class TestLogisticOptimizer(TestCase):
 
-    def test_that_capacity_limits_works_and_changing_a_result(self):
+    def test_capacity_limits_and_result_changing(self):
         central_store = {'location': (50.45, 30.51)}
 
         locations = [{'location': (50.46, 30.49), "demand": 1}, {'location': (50.485212, 30.505732), "demand": 2},
@@ -21,7 +21,7 @@ class TestLogisticOptimizer(TestCase):
         self.assertTrue([(50.45, 30.51), (50.485212, 30.505732)] in solution['routes'].values())
         self.assertTrue([(50.45, 30.51), (50.450190, 30.502826), (50.46, 30.49)] in solution['routes'].values())
 
-    def test_that_we_dropped_nodes_where_demand_is_not_satisfied(self):
+    def test_nodes_dropping_demand_is_not_satisfied(self):
         central_store = {'location': (50.45, 30.51)}
 
         locations = [{'location': (50.46, 30.49), "demand": 1}, {'location': (50.485212, 30.505732), "demand": 3},
@@ -35,7 +35,7 @@ class TestLogisticOptimizer(TestCase):
         self.assertTrue(solution['dropped_nodes'] == [(50.485212, 30.505732)])
         self.assertTrue(len(solution['routes'].keys()) == 1)
 
-    def test_that_time_constraint_and_demand_constraint_working(self):
+    def test_time_and_demand_constraints(self):
         central_store = {'location': (50.45, 30.51)}
 
         unix_time = int(time.time())
@@ -53,7 +53,7 @@ class TestLogisticOptimizer(TestCase):
         self.assertTrue(solution['dropped_nodes'] == [(50.485212, 30.505732), (50.45019, 30.502826)])
         self.assertTrue(solution['routes'][1] == [(50.45, 30.51), (50.46, 30.49)])
 
-    def test_that_time_constraint_working(self):
+    def test_time_constraint(self):
         central_store = {'location': (50.45, 30.51)}
 
         unix_time = int(time.time())
@@ -70,7 +70,7 @@ class TestLogisticOptimizer(TestCase):
         solution = model.solve()
         self.assertTrue(solution['dropped_nodes'] == [(50.45019, 30.502826)])
 
-    def test_that_pid_sets_correctly(self):
+    def test_correct_pids(self):
         central_store = {'location': (50.45, 30.51)}
 
         locations = [{'location': (50.46, 30.49), "demand": 3},
