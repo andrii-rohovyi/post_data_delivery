@@ -88,7 +88,7 @@ class LogisticOptimizer(object):
                 })
 
         else:
-            points_for_querying = {(x, y): (x_i, y_i)
+            points_for_querying = {(tuple(x), tuple(y)): (x_i, y_i)
                                    for x_i, x in enumerate(self.total_locations)
                                    for y_i, y in enumerate(self.total_locations)
                                    if x != y}

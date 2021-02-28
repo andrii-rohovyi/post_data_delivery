@@ -1,33 +1,33 @@
 import sys
 import logging
-from flask import Flask, request, jsonify
+from aiohttp import web
 import pprint
 
 from logistic import LogisticOptimizer
 
-
-app = Flask(__name__)
+routes = web.RouteTableDef()
 logging.basicConfig(stream=sys.stdout, level=logging.ERROR)
 
 
-@app.route("/", methods=["POST"])
-def main_page():
+@routes.post("/")
+async def main_page(request):
     """
     Main server for choosing stores set for delivery man
 
     """
 
-    data = request.get_json(force=True)
+    data = await request.json()
     model = LogisticOptimizer(central_store=data['central_store'],
                               stores=data['stores'],
                               couriers=data['couriers'],
                               approximation=False)
-    print(model.mode)
     pprint.pprint(model.road_to_weight)
     result = model.solve()
 
-    return jsonify(result)
+    return web.json_response(result)
 
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', debug=True, port=8080)
+    app = web.Application()
+    app.add_routes(routes)
+    web.run_app(app)
