@@ -59,7 +59,7 @@ class LogisticOptimizer(object):
                                  + [store.get('time_window', [int(time.time()), MAX_WEIGHT]) for store in stores])
 
         if not approximation:
-            self.gmaps = GoogleQuerying(mode=mode)
+            self.gmaps = GoogleQuerying(mode=self.mode)
         self.approximation = approximation
 
         # Create the routing index manager.
