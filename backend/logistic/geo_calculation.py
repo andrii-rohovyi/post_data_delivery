@@ -27,7 +27,7 @@ class GoogleQuerying(object):
     async def fetch(self,
                     client: aiohttp.ClientSession,
                     points: Tuple[Tuple[float, float], Tuple[float, float]]
-                    ) -> Coroutine[dict, Any, Any]:
+                    ) -> dict:
         """
         Fetch data from Direction API
         Here you can find more detailed information about it: https://developers.google.com/maps/documentation/directions/overview
@@ -41,7 +41,7 @@ class GoogleQuerying(object):
 
         Returns
         -------
-        Coroutine[dict, Any, Any]
+        dict
             Coroutine of directions API response
 
         """
