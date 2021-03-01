@@ -9,3 +9,5 @@ To stop Docker containers: docker stop $(docker ps -a -q)
 Example of local service running: `python3 main.py`
 ### Example of POST query
 Query for client: curl -X POST -d @example.json http://localhost:8080
+### Check unit tests before each PR
+`python -m pytest tests `
