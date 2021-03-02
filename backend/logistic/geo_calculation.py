@@ -4,12 +4,14 @@ import asyncio
 import nest_asyncio
 from typing import List, Tuple, Dict, Coroutine, Any
 
+from openrouteservice.client import Client as ORSClient
+
 from logistic.config import MAX_WEIGHT
 
 nest_asyncio.apply()
 
 
-class GoogleQuerying(object):
+class AsyncQuerying(object):
 
     def __init__(self, mode: str):
         """
@@ -19,34 +21,35 @@ class GoogleQuerying(object):
         ----------
         mode: str
             Mode in which deliveryman moving
-            There can be several modes that is supported: "driving", "walking", "bicycling", "transit", "haversine"
+            There can be several modes that is supported: "driving-car", "foot-walking", "cycling-reglar"
         """
         self.mode = mode
         self.session = aiohttp.ClientSession()
+        self.api_client = ORSClient(key=os.environ.get("ORS_API_KEY"))
 
-    async def fetch(self,
-                    client: aiohttp.ClientSession,
-                    points: Tuple[Tuple[float, float], Tuple[float, float]]
-                    ) -> dict:
+    async def fetch_distance_matrix(self,
+                                    client: aiohttp.ClientSession,
+                                    points: List[Tuple[float, float]]
+                                    ) -> dict:
         """
-        Fetch data from Direction API
-        Here you can find more detailed information about it: https://developers.google.com/maps/documentation/directions/overview
+        Fetch data from Openroute Service API
+        Here you can find more detailed information about it: https://openrouteservice.org/dev/#/api-docs
 
         Parameters
         ----------
         client: aiohttp.ClientSession
             aiohttp client
-        points: Tuple[Tuple[float, float], Tuple[float, float]]
-            Points between each we need to query Directions API
+        points: List[Tuple[float, float]]
+            Points between each we need to query Openroute Service API
 
         Returns
         -------
         dict
-            Coroutine of directions API response
+            Coroutine of Openroute Service API response
 
         """
         async with client.get(
-                f'https://maps.googleapis.com/maps/api/directions/json?origin={points[0][0]},{points[0][1]}&destination={points[1][0]},{points[1][1]}&mode={self.mode}&transit_mode=bus|subway|train|tram|rail&key={os.environ.get("API_KEY")}') as resp:
+                f'https://api.openrouteservice.org/matrix?api_key={s.environ.get("ORS_API_KEY")}&profile={self.mode}&locations={'|'.join([','.join([str(coord[1]), str(coord[0])]) for coord in coords])}') as resp:
             assert resp.status == 200
             return await resp.json()
 
@@ -90,18 +93,16 @@ class GoogleQuerying(object):
 
         return returns
 
-    def duration_calculation(self, points_connections: List[Tuple[float, float]]) -> Dict[Tuple[float, float], float]:
+    def duration_calculation(self, points: List[Tuple[float, float]]) -> Dict[Tuple[float, float], float]:
         """
         Calculate duration for moving between points_connections list
 
         Parameters
         ----------
-        points_connections: List[Tuple[float, float]]
+        points: List[Tuple[float, float]]
             List of points tuples in (lat, lon) format between each we need to calculate duration of movement.
-            Examples:  [((30.302990054837696, 50.50609174896435),
-                          (30.55375538507264, 50.55876662752421)),
-                                             ((34.302990054837696, 50.50609174896435),
-                          (30.55375538507264, 50.55876662752421))]
+            Examples:  [(30.302990054837696, 50.50609174896435),(30.55375538507264, 50.55876662752421),
+                        (34.302990054837696, 50.50609174896435),(30.55375538507264, 50.55876662752421)]
 
         Returns
         -------
@@ -113,10 +114,9 @@ class GoogleQuerying(object):
                           (30.55375538507264, 50.55876662752421)): 9223372036854775807]
 
         """
-        returns = asyncio.run(self.query_google(points_connections))
-        points_dictionaries = {points_connections[i]: returns[i]['routes'][0]['legs'][0]['duration']['value']
-                               if returns[i]['routes'] != [] else MAX_WEIGHT
-                               for i in range(len(points_connections))
-                               }
+        returns = asyncio.run(self.fetch_distance_matrix(points))
+        durations = returns[i]['durations']
+        points_dictionaries = {(points[i], points[j]): durations[i][j] if durations[i][j] else MAX_WEIGHT 
+                                for j in range(len(points)) for i in range(len(points))}
 
         return points_dictionaries
