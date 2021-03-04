@@ -4,6 +4,7 @@ from flask import Flask, request, jsonify
 import pprint
 
 from logistic import LogisticOptimizer
+from utils import del_none
 
 
 app = Flask(__name__)
@@ -17,7 +18,7 @@ def main_page():
 
     """
 
-    data = request.get_json(force=True)
+    data = del_none(request.get_json(force=True))
     model = LogisticOptimizer(central_store=data['central_store'],
                               stores=data['stores'],
                               couriers=data['couriers'],
