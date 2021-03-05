@@ -6,7 +6,7 @@ export const InputNumberComponent = ({ input, meta, ...rest }: any) => {
         {...input}
         {...rest}
         min={1}
-        max={10}
+        max={1000}
         defaultValue={3}
         onChange={(value: any) => input.onChange(value)}
         errorText={meta.touched ? meta.error : ''}

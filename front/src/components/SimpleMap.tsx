@@ -106,14 +106,13 @@ export const SimpleMap: React.FC<Props> = ({
     }
     return (
       // Important! Always set the container height explicitly
-      <div style={{ height: '100vh', width: '60%', float: "right" }}>
+      <div style={{ height: '100vh', width: '66%', float: "right" }}>
         <GoogleMapReact
           bootstrapURLKeys={{ key: "AIzaSyCWYtTeal3a9ttpSA8HYHmgJ21k4gnVMOA" }}
           defaultCenter={center}
           defaultZoom={11}
           onClick={addMapPoint}
         >
-            {console.log(result, 'result')}
             {  // {'routes': [{'lat': [50.4486941427873, 30.52272858686755], 'lng': [50.33231051081023, 30.368480777750914]}], 'dropped_nodes': [{'lat': 50.534377970341886, 'lng': 30.73514947892279}]}
             }
 

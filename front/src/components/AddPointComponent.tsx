@@ -30,7 +30,7 @@ export const AddPointComponent: React.FC<Props> = ({
    setShowResult
 }) => {
     return (
-        <aside style={{ float: "left", width: "40%" }}>
+        <aside style={{ float: "left", width: "34%" }}>
         <AddPointForm
             points={points}
             addPoint={addPoint}
