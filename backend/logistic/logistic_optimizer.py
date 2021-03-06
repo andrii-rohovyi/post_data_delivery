@@ -173,7 +173,14 @@ class LogisticOptimizer(object):
 
             if len(route) > 1:
                 courier_id = self.couriers[courier_number]['pid']
-                routes[courier_id] = route
+                routes[courier_id] = {'route': route}
+
+
+        if not self.approximation:
+            points = [data['route'] for _, data in routes.items()]
+            detailed_routes = self.routing_service.directions_calculation(points)
+            for i, (courier_id, data) in enumerate(routes.items()):
+                routes[courier_id]['detailed_route'] = detailed_routes[i]
 
         return {'routes': routes, 'dropped_nodes': dropped_nodes}
 

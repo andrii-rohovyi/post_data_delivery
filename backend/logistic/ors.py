@@ -113,7 +113,7 @@ class ORS(object):
         if ref == 'matrix':
             returns = await asyncio.gather(self.call_api(points, ref))
         elif ref == 'directions':
-            returns = await asyncio.gather(*[self.call_api(points, ref) for points in points_connections])
+            returns = await asyncio.gather(*[self.call_api(point, ref) for point in points])
         await self.session.close()
 
         return returns
@@ -149,9 +149,9 @@ class ORS(object):
 
         return points_dictionaries
 
-    def directions_calculation(self, point):
+    def directions_calculation(self, points):
         returns = asyncio.run(self.query(points, 'directions'))
-        routes = [convert.decode_polyline(route['routes'][0]['geometry']) for route in returns]
+        routes = [convert.decode_polyline(route['routes'][0]['geometry'])['coordinates'] for route in returns]
 
         return routes
 
