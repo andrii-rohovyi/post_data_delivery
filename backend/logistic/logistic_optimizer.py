@@ -7,6 +7,7 @@ from ortools.constraint_solver import routing_enums_pb2
 from ortools.constraint_solver import pywrapcp
 
 from logistic.geo_calculation import GoogleQuerying
+from logistic.ors import ORS
 from logistic.config import MAX_WEIGHT, SOLUTION_CALCULATION_MAX_TIME
 from logistic.utils import duration_approximation
 
@@ -59,7 +60,7 @@ class LogisticOptimizer(object):
                                  + [store.get('time_window', [int(time.time()), MAX_WEIGHT]) for store in stores])
 
         if not approximation:
-            self.gmaps = GoogleQuerying(mode=self.mode)
+            self.routing_service = ORS(mode=self.mode)
         self.approximation = approximation
 
         # Create the routing index manager.
@@ -72,29 +73,25 @@ class LogisticOptimizer(object):
 
         Returns
         -------
-        ict[Tuple[Tuple[float, float], Tuple[float, float]], float]
+        Dict[Tuple[Tuple[float, float], Tuple[float, float]], float]
             Dict with weights for each locations pairs in (lat, lon) format. \
             Example: ((0, 0), (45, 45)) : 2
 
         """
         points_to_weight = {(i, i): 0 for i in range(len(self.total_locations))}
 
-        for point_1, point_2 in combinations(enumerate(self.total_locations), 2):
-            if self.approximation:
+        if self.approximation:
+            for point_1, point_2 in combinations(enumerate(self.total_locations), 2):
+                print(point_1, point_2)
                 duration = duration_approximation(point_1=point_1[1], point_2=point_2[1], mode=self.mode)
                 points_to_weight.update({
                     (point_1[0], point_2[0]): duration,
                     (point_2[0], point_1[0]): duration
                 })
-
         else:
-            points_for_querying = {(tuple(x), tuple(y)): (x_i, y_i)
-                                   for x_i, x in enumerate(self.total_locations)
-                                   for y_i, y in enumerate(self.total_locations)
-                                   if x != y}
-            new_points_weights = self.gmaps.duration_calculation(list(points_for_querying.keys()))
-            points_to_weight.update({points_for_querying[key]: value for key, value in new_points_weights.items()})
-
+            points2indexes = {tuple(point): i for i, point in enumerate(self.total_locations)}
+            new_points_weights = self.routing_service.duration_calculation(self.total_locations)
+            points_to_weight.update({(points2indexes[key[0]], points2indexes[key[1]]): value for key, value in new_points_weights.items()})
         return points_to_weight
 
     def demand_callback(self, from_index) -> int:
