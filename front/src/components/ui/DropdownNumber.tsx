@@ -38,7 +38,7 @@ const menu = (
       <Button
           style={{marginLeft: "30px"}}
       >
-          {input.value ? input.value : " 100 "}<DownOutlined />
+          {input.value ? input.value : 300 }<DownOutlined />
       </Button>
     </Dropdown>
 )}

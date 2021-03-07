@@ -6,7 +6,11 @@ export const DatePicker = ({ input, meta, ...rest }: any) => {
     <AntDatePicker
         {...input}
         {...rest}
-        onChange={(value: any) => input.onChange(value)}
+        format="YYYY-MM-DD"
+        onChange={(value: any) => {
+            console.log(value.valueOf());
+            input.onChange(value)
+        }}
         errorText={meta.touched ? meta.error : ''}
     />
 )}

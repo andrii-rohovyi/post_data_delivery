@@ -1,11 +1,13 @@
 import React from "react";
 import {AddPointForm} from "./AddPointForm";
 
+var moment = require('moment');
+
 type PointType = {
   lat: number,
   lng: number,
   demand?: number
-  time_window?: [Date, Date]
+  time_window?: [moment.Moment, moment.Moment]
 }
 
 type Response = {

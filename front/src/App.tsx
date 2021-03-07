@@ -4,11 +4,13 @@ import "antd/dist/antd.css";
 import SimpleMap from "./components/SimpleMap";
 import {AddPointComponent} from "./components/AddPointComponent";
 
+var moment = require('moment');
+
 type PointType = {
   lat: number,
   lng: number,
   demand?: number
-  time_window?: [Date, Date]
+  time_window?: [moment.Moment, moment.Moment]
 }
 
 type Response = {

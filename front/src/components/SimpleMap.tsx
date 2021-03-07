@@ -42,6 +42,15 @@ const colors = [
     "#67595E",
 ]
 
+function kall (maps: any) {
+    return {
+      panControl: false,
+      mapTypeControl: false,
+      scrollwheel: false,
+      styles: [{ stylers: [{ 'saturation': -100 }, ] }]
+    }
+  }
+
 const Marker: React.FC<MarkerProps> = ({
    children,
    text,
@@ -59,7 +68,7 @@ const Marker: React.FC<MarkerProps> = ({
                     width: "20px",
                     height: "20px",
                     color: "#fff",
-                    background: startingPoint ? "#FAD02C" : courier ? colors[courier] : "#900020",
+                    background: startingPoint ? "#006DFF" : courier ? colors[courier] : "#900020",
                     borderRadius: "50%",
                     padding: "10px",
                     display: "flex",
@@ -112,6 +121,7 @@ export const SimpleMap: React.FC<Props> = ({
           defaultCenter={center}
           defaultZoom={11}
           onClick={addMapPoint}
+          options={{styles: [{ stylers: [{ 'saturation': -100 }, ] }]}}
         >
             {  // {'routes': [{'lat': [50.4486941427873, 30.52272858686755], 'lng': [50.33231051081023, 30.368480777750914]}], 'dropped_nodes': [{'lat': 50.534377970341886, 'lng': 30.73514947892279}]}
             }

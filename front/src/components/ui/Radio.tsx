@@ -4,13 +4,13 @@ import React from "react";
 
 
 const checkedIcons = {
-    'car': <CarFilled style={{color: "#1890ff"}} width="24px" height="24px"/>,
-    'shopping': <ShoppingFilled style={{color: "#1890ff"}} />
+    'driving': <CarFilled style={{color: "#1890ff"}} width="24px" height="24px"/>,
+    'walking': <ShoppingFilled style={{color: "#1890ff"}} />
 }
 
 const unCheckedIcons = {
-    'car': <CarFilled />,
-    'shopping': <ShoppingFilled />
+    'driving': <CarFilled />,
+    'walking': <ShoppingFilled />
 }
 
 
