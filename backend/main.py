@@ -1,34 +1,45 @@
 import sys
 import logging
-from flask import Flask, request, jsonify
+from aiohttp import web
+import aiohttp
 import pprint
+import asyncio
 
 from logistic import LogisticOptimizer
+from logistic.ors import ORS
+
 from utils import del_none
 
-
-app = Flask(__name__)
+routes = web.RouteTableDef()
 logging.basicConfig(stream=sys.stdout, level=logging.ERROR)
 
 
-@app.route("/", methods=["POST"])
-def main_page():
+@routes.post("/")
+async def main_page(request):
     """
     Main server for choosing stores set for delivery man
 
     """
+    data = await request.json()
+    data = del_none(data)
 
-    data = del_none(request.get_json(force=True))
     model = LogisticOptimizer(central_store=data['central_store'],
                               stores=data['stores'],
                               couriers=data['couriers'],
+                              routing_manager=ORS(request.app['ors_querer']),
                               approximation=False)
-    print(model.mode)
     pprint.pprint(model.road_to_weight)
     result = model.solve()
 
-    return jsonify(result)
+    return web.json_response(result)
+
+
+def main():
+    app = web.Application()
+    app['ors_querer'] = aiohttp.ClientSession()
+    app.add_routes(routes)
+    web.run_app(app)
 
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', debug=True, port=8080)
+    asyncio.run(main())

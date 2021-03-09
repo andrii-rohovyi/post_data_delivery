@@ -1,5 +1,6 @@
 import requests
 import json
+import pprint
 
 
 def main():
@@ -11,7 +12,7 @@ def main():
 
     results = requests.post(url, json=data)
 
-    print(results.text)
+    pprint.pprint(results.json())
 
 
 if __name__ == '__main__':
