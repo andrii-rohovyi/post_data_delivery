@@ -13,25 +13,25 @@ nest_asyncio.apply()
 
 class ORS(object):
 
-    def __init__(self, mode: str):
+    def __init__(self, async_session: aiohttp.ClientSession):
         """
         Class for querying Google API
 
         Parameters
         ----------
-        mode: str
+        async_session: aiohttp.ClientSession
             Mode in which deliveryman moving
             There can be several modes that is supported: "driving-car", "foot-walking", "cycling-reglar"
         """
-        self.mode = mode
-        self.session = aiohttp.ClientSession()
+        self.session = async_session
         self.base_api_url = 'https://api.openrouteservice.org/v2/{}/{}'
         self.api_key = os.environ.get('ORS_API_KEY')
 
     async def fetch(self,
                     client: aiohttp.ClientSession,
                     points: List[Tuple[float, float]],
-                    ref: str
+                    ref: str,
+                    mode: str,
                     ) -> dict:
         """
         Fetch data from Openroute Service API
@@ -45,6 +45,8 @@ class ORS(object):
             Points between each we need to query Openroute Service API
         ref: str
             Specifies a part of the API to call. Either 'matrix' or 'directions'. 
+        mode: str
+            Specifies a transport
 
         Returns
         -------
@@ -52,7 +54,7 @@ class ORS(object):
             Coroutine of Openroute Service API response
 
         """
-        url = self.base_api_url.format(ref, self.mode)
+        url = self.base_api_url.format(ref, mode)
 
         body = {}
         if ref == 'matrix':
@@ -72,7 +74,8 @@ class ORS(object):
 
     async def call_api(self,
                        points: Tuple[Tuple[float, float], Tuple[float, float]],
-                       ref
+                       ref: str,
+                       mode: str
                        ) -> Coroutine[Any, Any, Any]:
         """
         Querying Directions API in different sessions
@@ -81,29 +84,35 @@ class ORS(object):
         ----------
         points: Tuple[Tuple[float, float], Tuple[float, float]]
             Points between each we need to query Directions API
+        ref: str
+            Specifies a part of the API to call. Either 'matrix' or 'directions'. 
+        mode: str
+            Specifies a transport
         Returns
         -------
 
         """
-        return await self.fetch(self.session, points, ref)
+        return await self.fetch(self.session, points, ref, mode)
 
     async def query(self,
                     points,
-                    ref: str
-                    ):
+                    ref: str,
+                    mode: str):
         """
-        async ethod allowing us to await in the body of the functio
+        async method allowing us to await in the body of the function
 
         Parameters
         ----------
         points: List[Tuple[Tuple[float, float], Tuple[float, float]]]
-            List of points tuples in (lat, lon) format between each we need to calculate duration of movement.
+            List of points tuples in (lat, lon) format between each we need to calculate duration of movement or directions.
             Examples:  1. [(30.302990054837696, 50.50609174896435),(30.55375538507264, 50.55876662752421),
                         (34.302990054837696, 50.50609174896435),(30.55375538507264, 50.55876662752421)]
                        2. [[(30.302990054837696, 50.50609174896435),(30.55375538507264, 50.55876662752421)], 
                             (30.302990054837696, 50.50609174896435),(30.55375538507264, 50.55876662752421)]]
         ref: str
             Specifies a part of the API to call. Either 'matrix' or 'directions'. 
+        mode: str
+            Specifies a transport
 
         Returns
         -------
@@ -111,23 +120,24 @@ class ORS(object):
         """
         returns = []
         if ref == 'matrix':
-            returns = await asyncio.gather(self.call_api(points, ref))
+            returns = await asyncio.gather(self.call_api(points, ref, mode))
         elif ref == 'directions':
-            returns = await asyncio.gather(*[self.call_api(point, ref) for point in points])
-        await self.session.close()
+            returns = await asyncio.gather(*[self.call_api(point, ref, mode) if len(point) else [] for point in points])
 
         return returns
 
-    def duration_calculation(self, points: List[Tuple[float, float]]) -> Dict[Tuple[float, float], float]:
+    def duration_calculation(self, points: List[Tuple[float, float]], mode: str) -> Dict[Tuple[float, float], float]:
         """
-        Calculate duration for moving between points_connections list
+        Calculate duration for moving between points
 
         Parameters
         ----------
-        points: List[Tuple[float, float]]
+        points: List[List[float, float]]
             List of points tuples in (lat, lon) format between each we need to calculate duration of movement.
             Examples:  [(30.302990054837696, 50.50609174896435),(30.55375538507264, 50.55876662752421),
                         (34.302990054837696, 50.50609174896435),(30.55375538507264, 50.55876662752421)]
+        mode: str
+            Specifies a transport
 
         Returns
         -------
@@ -139,8 +149,8 @@ class ORS(object):
                           (30.55375538507264, 50.55876662752421)): 9223372036854775807]
 
         """
-        
-        returns = asyncio.run(self.query(points, 'matrix'))
+        ors_points = [[coord[1], coord[0]] for coord in points]
+        returns = asyncio.run(self.query(ors_points, 'matrix', mode))
 
         durations = returns[0]['durations']
 
@@ -149,9 +159,32 @@ class ORS(object):
 
         return points_dictionaries
 
-    def directions_calculation(self, points):
-        returns = asyncio.run(self.query(points, 'directions'))
+    def directions_calculation(self, points: List[List[Tuple[float, float]]], mode: str) -> List[List[Tuple[float, float]]]:
+        """
+        Calculate direction for moving between points
+
+        Parameters
+        ----------
+        points: List[List[float, float]]
+            List of points tuples in (lat, lon) format between each we need to calculate duration of movement.
+            Examples:  [(30.302990054837696, 50.50609174896435),(30.55375538507264, 50.55876662752421),
+                        (34.302990054837696, 50.50609174896435),(30.55375538507264, 50.55876662752421)]
+        mode: str
+            Specifies a transport
+
+        Returns
+        -------
+        List[List[List[float, float]]]
+            List of list of coordinates 
+            Examples:  [ 
+                            [[50.5, 30.3],[50.55, 30.35], [50.6, 30.4]],
+                            [[55.5, 35.3],[55.55, 35.35], [55.6, 35.4]]
+                        ]
+
+        """
+        returns = asyncio.run(self.query(points, 'directions', mode))
         routes = [convert.decode_polyline(route['routes'][0]['geometry'])['coordinates'] for route in returns]
+        routes = [[[coord[1], coord[0]] for coord in route] for route in routes]
 
         return routes
 

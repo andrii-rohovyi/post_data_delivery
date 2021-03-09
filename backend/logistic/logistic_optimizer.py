@@ -7,8 +7,7 @@ from ortools.constraint_solver import routing_enums_pb2
 from ortools.constraint_solver import pywrapcp
 
 from logistic.geo_calculation import GoogleQuerying
-from logistic.ors import ORS
-from logistic.config import MAX_WEIGHT, SOLUTION_CALCULATION_MAX_TIME
+from logistic.config import MAX_WEIGHT, SOLUTION_CALCULATION_MAX_TIME, MODE_CONVERTER
 from logistic.utils import duration_approximation
 
 
@@ -18,6 +17,7 @@ class LogisticOptimizer(object):
                  central_store: Dict[str, Union[Tuple[float, float], Tuple[int, int]]],
                  stores: List[Dict[str, Union[Tuple[float, float], int, Tuple[int, int]]]],
                  couriers: List[Dict[str, Union[str, int]]],
+                 routing_manager: object,
                  approximation: bool = True):
         """
         Class for scheduling delivery process
@@ -45,8 +45,8 @@ class LogisticOptimizer(object):
         self.stores = stores
         self.couriers = couriers
 
-        # There can be several modes that is supported: "driving", "walking", "bicycling", "transit"
-        self.mode = couriers[0]['transport']  # TODO Add processing for different transport types for different couriers
+        # There can be several modes that is supported: "driving", "walking", "bicycling"
+        self.mode = MODE_CONVERTER[couriers[0]['transport']]  # TODO Add processing for different transport types for different couriers
 
         self.total_locations = [central_store['location']] + [store['location'] for store in stores]
         self.amount_of_couriers = len(couriers)
@@ -60,7 +60,7 @@ class LogisticOptimizer(object):
                                  + [store.get('time_window', [int(time.time()), MAX_WEIGHT]) for store in stores])
 
         if not approximation:
-            self.routing_service = ORS(mode=self.mode)
+            self.routing_manager = routing_manager
         self.approximation = approximation
 
         # Create the routing index manager.
@@ -82,7 +82,6 @@ class LogisticOptimizer(object):
 
         if self.approximation:
             for point_1, point_2 in combinations(enumerate(self.total_locations), 2):
-                print(point_1, point_2)
                 duration = duration_approximation(point_1=point_1[1], point_2=point_2[1], mode=self.mode)
                 points_to_weight.update({
                     (point_1[0], point_2[0]): duration,
@@ -90,7 +89,7 @@ class LogisticOptimizer(object):
                 })
         else:
             points2indexes = {tuple(point): i for i, point in enumerate(self.total_locations)}
-            new_points_weights = self.routing_service.duration_calculation(self.total_locations)
+            new_points_weights = self.routing_manager.duration_calculation(self.total_locations, self.mode)
             points_to_weight.update({(points2indexes[key[0]], points2indexes[key[1]]): value for key, value in new_points_weights.items()})
         return points_to_weight
 
@@ -134,7 +133,7 @@ class LogisticOptimizer(object):
     def decode_solution(self,
                         routing: ortools.constraint_solver.pywrapcp.RoutingModel,
                         solution: ortools.constraint_solver.pywrapcp.Assignment
-                        ) -> Dict[str, Union[Dict[str, List[Tuple[int, int]]], List[List[Tuple[int, int]]]]]:
+                        ) -> Dict[str, Union[List[Dict], List[Dict]]]:
         """
         Decode ortools solution to REST format
 
@@ -147,10 +146,23 @@ class LogisticOptimizer(object):
 
         Returns
         -------
-        Dict[str, Union[Dict[str, List[Tuple[int, int]]], List[List[Tuple[int, int]]]]]
-            Dict where keys are couriers' ids and values are routes and list of nodes that can't be reached in this mode from
-            central store
-            Example: {'routes': {'aaa111': [(0,0), (1,1), (2,2)], 'bbb222': [(0,0), (1,2), (2,1)]}, 'dropped_nodes': [] }
+        Dict[str, Union[List[Dict], List[Dict]]]
+        Example: 
+        {
+            'routes': [
+                {
+                    'courier_id': 'aaa111', 
+                    'route': [{'lat': 0, 'lng': 0}, {'lat': 1, 'lng': 1}], 
+                    'detailed_route': [{'lat': 0, 'lng': 0}, {'lat': 0.5, 'lng': 0.5}, {'lat': 1, 'lng': 1}]
+                },
+                {
+                    'courier_id': 'bbb111', 
+                    'route': [{'lat': 0, 'lng': 0}, {'lat': 2, 'lng': 2}], 
+                    'detailed_route': [{'lat': 0, 'lng': 0}, {'lat': 1, 'lng': 1}, {'lat': 1, 'lng': 1}]
+                },               
+            ], 
+            'dropped_nodes': [{'lat': 6, 'lng': 6}] 
+        }
 
         """
         # calculate dropping nodes
@@ -160,27 +172,26 @@ class LogisticOptimizer(object):
             if routing.IsStart(node) or routing.IsEnd(node):
                 continue
             if solution.Value(routing.NextVar(node)) == node:
-                dropped_nodes.append(self.total_locations[self.manager.IndexToNode(node)])
+                lat, lng = self.total_locations[self.manager.IndexToNode(node)]
+                dropped_nodes.append({'lat': lat, 'lng': lng})
 
         # calculate route for deliveryman
-        routes = {}
+        routes = []
         for courier_number in range(self.amount_of_couriers):
             index = routing.Start(courier_number)
             route = []
             while not routing.IsEnd(index):
-                route.append(self.total_locations[self.manager.IndexToNode(index)])
+                lat, lng = self.total_locations[self.manager.IndexToNode(index)]
+                route.append({'lat': lat, 'lng': lng})
                 index = solution.Value(routing.NextVar(index))
 
-            if len(route) > 1:
-                courier_id = self.couriers[courier_number]['pid']
-                routes[courier_id] = {'route': route}
+            courier_id = self.couriers[courier_number]['pid']
+            routes.append({'courier_id': courier_id, 'route': route}, )
 
-
-        if not self.approximation:
-            points = [data['route'] for _, data in routes.items()]
-            detailed_routes = self.routing_service.directions_calculation(points)
-            for i, (courier_id, data) in enumerate(routes.items()):
-                routes[courier_id]['detailed_route'] = detailed_routes[i]
+        points = [[[coords['lng'], coords['lat']] for coords in obj['route']] for obj in routes]
+        detailed_routes = self.routing_manager.directions_calculation(points, self.mode)
+        for i, route in enumerate(routes):
+            route['detailed_route'] = detailed_routes[i]
 
         return {'routes': routes, 'dropped_nodes': dropped_nodes}
 
