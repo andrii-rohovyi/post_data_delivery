@@ -8,6 +8,8 @@ import asyncio
 from logistic import LogisticOptimizer
 from logistic.ors import ORS
 
+from utils import del_none
+
 routes = web.RouteTableDef()
 logging.basicConfig(stream=sys.stdout, level=logging.ERROR)
 
@@ -18,8 +20,9 @@ async def main_page(request):
     Main server for choosing stores set for delivery man
 
     """
-
     data = await request.json()
+    data = del_none(data)
+
     model = LogisticOptimizer(central_store=data['central_store'],
                               stores=data['stores'],
                               couriers=data['couriers'],
