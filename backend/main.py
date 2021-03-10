@@ -32,6 +32,8 @@ def main_page():
         'routes': [[{'lat': p[0], 'lng': p[1]} for p in point] for point in result.get('routes', [])],
         'dropped_nodes': [{'lat': p[0], 'lng': p[1]} for p in result.get('dropped_nodes', [])]
     }
+    print(r)
+    # {'routes': [[{'lat': 50.4486941427873, 'lng': 30.52272858686755}, {'lat': 50.443182537581635, 'lng': 30.537797837451716}, {'lat': 50.43837215321555, 'lng': 30.511361985400935}]]
 
     return jsonify(r)
 

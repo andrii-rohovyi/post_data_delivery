@@ -8,7 +8,7 @@ export const RangeTimePicker = ({ input, meta, ...rest }: any) => {
     <RangePicker
         {...input}
         {...rest}
-        style={{width: "40%"}}
+        style={{width: "37%"}}
         format="HH:mm"
         onChange={(value: any) => input.onChange(value)}
         errorText={meta.touched ? meta.error : ''}

@@ -11,8 +11,14 @@ type PointType = {
 }
 
 type Response = {
-    routes: PointType[][],
-    dropped_nodes: PointType[][]
+    routes: RouteType[],
+    dropped_nodes: PointType[]
+}
+
+
+type RouteType = {
+    route: PointType[],
+    detailed_route: PointType[]
 }
 
 
@@ -22,6 +28,7 @@ type Props = {
     result: Response,
     setResult: (points: Response) => void
     setShowResult: (showResult: boolean) => void
+    maps: any
 }
 
 export const AddPointComponent: React.FC<Props> = ({
@@ -29,7 +36,8 @@ export const AddPointComponent: React.FC<Props> = ({
    addPoint,
    result,
    setResult,
-   setShowResult
+   setShowResult,
+    maps
 }) => {
     return (
         <aside style={{ float: "left", width: "34%" }}>
@@ -39,6 +47,7 @@ export const AddPointComponent: React.FC<Props> = ({
             result={result}
             setResult={setResult}
             setShowResult={setShowResult}
+            maps={maps}
         />
       </aside>
     )

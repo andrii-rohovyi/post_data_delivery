@@ -14,8 +14,14 @@ type PointType = {
 }
 
 type Response = {
-    routes: PointType[][],
-    dropped_nodes: PointType[][]
+    routes: RouteType[],
+    dropped_nodes: PointType[]
+}
+
+
+type RouteType = {
+    route: PointType[],
+    detailed_route: PointType[]
 }
 
 function App() {
@@ -25,6 +31,7 @@ function App() {
   }]);
   const [result, setResult] = useState<Response>({routes: [], dropped_nodes: []});
   const [showResult, setShowResult] = useState(false);
+  const [maps, setMaps] = useState(null);
   return (
     <div className="App">
         <AddPointComponent
@@ -33,9 +40,16 @@ function App() {
             result={result}
             setResult={setResult}
             setShowResult={setShowResult}
+            maps={maps}
         />
       <div>
-        <SimpleMap points={points} addPoint={addPoint} result={result} showResult={showResult}/>
+        <SimpleMap
+            points={points}
+            addPoint={addPoint}
+            result={result}
+            showResult={showResult}
+            setMap={setMaps}
+        />
       </div>
     </div>
   );
