@@ -107,7 +107,7 @@ export const AddPointForm: React.FC<Props> = ({
           }))
       }
       console.log(data.central_store.time_window, 'central time_window');
-      const rawResponse = await fetch('http://localhost:8080', {
+      const rawResponse = await fetch('/', {
         method: 'POST',
         headers: {
           'Accept': 'application/json',
