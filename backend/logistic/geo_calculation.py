@@ -47,6 +47,7 @@ class GoogleQuerying(object):
         """
         async with client.get(
                 f'https://maps.googleapis.com/maps/api/directions/json?origin={points[0][0]},{points[0][1]}&destination={points[1][0]},{points[1][1]}&mode={self.mode}&transit_mode=bus|subway|train|tram|rail&key={os.environ.get("API_KEY")}') as resp:
+            print(await resp.text())
             assert resp.status == 200
             return await resp.json()
 

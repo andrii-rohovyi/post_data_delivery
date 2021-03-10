@@ -176,15 +176,7 @@ export const AddPointForm: React.FC<Props> = ({
     ]
 }
 
-      setResult(resp);
-      const flightPath = new maps.maps.Polyline({
-        path: resp.routes[0].detailed_route,
-        geodesic: true,
-        strokeColor: "#FF0000",
-        strokeOpacity: 1.0,
-        strokeWeight: 2,
-      });
-      flightPath.setMap(maps.map);
+      setResult(content);
       setShowResult(true)
     }
     return (
@@ -401,6 +393,10 @@ export const AddPointForm: React.FC<Props> = ({
                           size="large"
                           onClick={() => {
                               form.reset();
+                              addPoint([{
+                                  lat: 50.4486941427873,
+                                  lng: 30.52272858686755
+                              }]);
                           }}
                           disabled={submitting}
                       >

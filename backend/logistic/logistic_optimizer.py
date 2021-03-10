@@ -6,7 +6,6 @@ import ortools
 from ortools.constraint_solver import routing_enums_pb2
 from ortools.constraint_solver import pywrapcp
 
-from logistic.geo_calculation import GoogleQuerying
 from logistic.config import MAX_WEIGHT, SOLUTION_CALCULATION_MAX_TIME, MODE_CONVERTER
 from logistic.utils import duration_approximation
 
@@ -38,7 +37,6 @@ class LogisticOptimizer(object):
         approximation: bool
             False if we don't use Google API, True otherwise
         """
-        approximation = True
         self.time_constraint = any([bool(point.get('time_window')) for point in chain([central_store], stores)])
         self.capacities_constraint = True if any(['demand' in x.keys() for x in stores]) else False
         self.central_store = central_store
@@ -191,7 +189,8 @@ class LogisticOptimizer(object):
         points = [[[coords['lng'], coords['lat']] for coords in obj['route']] for obj in routes]
         detailed_routes = self.routing_manager.directions_calculation(points, self.mode)
         for i, route in enumerate(routes):
-            route['detailed_route'] = detailed_routes[i]
+            print([{'lat': p[0], 'lng': p[1]} for p in detailed_routes[i]])
+            route['detailed_route'] = [{'lat': p[0], 'lng': p[1]} for p in detailed_routes[i]]
 
         return {'routes': routes, 'dropped_nodes': dropped_nodes}
 

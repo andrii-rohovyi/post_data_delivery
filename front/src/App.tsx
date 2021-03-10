@@ -49,6 +49,7 @@ function App() {
             result={result}
             showResult={showResult}
             setMap={setMaps}
+            maps={maps}
         />
       </div>
     </div>

@@ -33,6 +33,8 @@ type MarkerProps = {
 // }
 
 const colors = [
+    "#006DFF",
+    "#F2994A",
     "#900020",
     "#013A20",
     "#000000",
@@ -61,9 +63,10 @@ const Marker: React.FC<MarkerProps> = ({
                 style={{
                     width: "20px",
                     height: "20px",
-                    color: "#fff",
-                    background: startingPoint ? "#006DFF" : courier ? colors[courier] : "#900020",
+                    color: "black",
+                    background: startingPoint ? "#006DFF" : "#fff",
                     borderRadius: "50%",
+                    border: `2px solid ${courier !== undefined ? colors[courier] : "#006DFF"}`,
                     padding: "10px",
                     display: "flex",
                     justifyContent: "center",
@@ -159,6 +162,7 @@ type Props = {
     result: Response,
     showResult: boolean,
     setMap: (map: any) => void
+    maps: any
 }
 
 export const SimpleMap: React.FC<Props> = ({
@@ -166,7 +170,8 @@ export const SimpleMap: React.FC<Props> = ({
    addPoint,
    result,
    showResult,
-   setMap
+   setMap,
+   maps
 }) => {
 
     const center = {
@@ -203,6 +208,19 @@ export const SimpleMap: React.FC<Props> = ({
 
     };
 
+    if (showResult) {
+        result.routes.map((route, count) => {
+          const flightPath = new maps.maps.Polyline({
+              path: route.detailed_route,
+              geodesic: true,
+              strokeColor: colors[count],
+              strokeOpacity: 1.0,
+              strokeWeight: 2,
+          });
+          flightPath.setMap(maps.map);
+      })
+    }
+
 
     const addMapPoint = (event: PointType) => {
       addPoint(points.concat([{lat: event.lat, lng: event.lng}]))
@@ -231,6 +249,7 @@ export const SimpleMap: React.FC<Props> = ({
             }
             {showResult ?
                 result.routes.map((courierPoints, courierNumber) => {
+                    console.log(courierPoints, 'courierPoints');
                     return (
                     courierPoints.route.map((point, count) => {
                             if (count === 0) {
@@ -248,8 +267,8 @@ export const SimpleMap: React.FC<Props> = ({
                                     lat={point.lat}
                                     lng={point.lng}
                                     text={`Courier ${count} number ${courierNumber}`}
-                                    courier={count}
-                                    deliveryNumber={courierNumber}
+                                    courier={courierNumber}
+                                    deliveryNumber={count}
                                 />
                             )
                     }
@@ -261,6 +280,7 @@ export const SimpleMap: React.FC<Props> = ({
                     lng={point.lng}
                     text={`Point number ${count}`}
                     deliveryNumber={count}
+                    startingPoint={count === 0}
                   />
               ))
             }
