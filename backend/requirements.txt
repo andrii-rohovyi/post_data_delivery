@@ -5,3 +5,4 @@ aiohttp==3.7.3
 nest_asyncio==1.5.1
 openrouteservice==2.2.2
 aiohttp_cors
+aiohttp_jinja2
