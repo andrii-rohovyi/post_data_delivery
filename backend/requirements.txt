@@ -1,6 +1,6 @@
 haversine==2.3.0
-flask==1.1.2
 cached-property==1.5.2
 ortools==8.1.8487
-googlemaps==4.4.2
-flask_cors
+aiohttp==3.7.3
+nest_asyncio==1.5.1
+openrouteservice==2.2.2

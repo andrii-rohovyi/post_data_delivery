@@ -1,5 +1,5 @@
 {
 "central_store": {"location": [50.48433637043352, 30.594263011444706], "time_window": [0, 1000] },
 "stores": [ {"location": [50.48774027462997, 30.592721054052237], "demand": 1, "time_window": [0, 1000] }, {"location": [50.482790203309, 30.59069464521527], "demand": 1, "time_window": [0, 1000] } , {"location": [50.48641512965943, 30.6024212628405], "demand": 2, "time_window": [0, 1000] } ],
-"couriers": [{"pid": "aaa111", "capacity": 2, "transport": "walking"}, {"pid": "bbb222", "capacity": 1, "transport": "walking"}]
+"couriers": [{"pid": "aaa111", "capacity": 2, "transport": "driving"}, {"pid": "bbb222", "capacity": 1, "transport": "driving"}]
 }

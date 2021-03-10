@@ -1,48 +1,45 @@
 import sys
 import logging
-from flask import Flask, request, jsonify, render_template
-from flask_cors import CORS, cross_origin
+from aiohttp import web
+import aiohttp
 import pprint
+import asyncio
+
 from logistic import LogisticOptimizer
+from logistic.ors import ORS
 
+from utils import del_none
 
-app = Flask(__name__)
-CORS(app)
-
+routes = web.RouteTableDef()
 logging.basicConfig(stream=sys.stdout, level=logging.ERROR)
 
 
-@cross_origin(origins=['http://localhost:3000', 'localhost', '0.0.0.0:3000', '0.0.0.0'])
-@app.route("/", methods=["POST"])
-def main_page():
+@routes.post("/")
+async def main_page(request):
     """
     Main server for choosing stores set for delivery man
 
     """
+    data = await request.json()
+    data = del_none(data)
 
-    data = request.get_json(force=True)
     model = LogisticOptimizer(central_store=data['central_store'],
                               stores=data['stores'],
                               couriers=data['couriers'],
+                              routing_manager=ORS(request.app['ors_querer']),
                               approximation=False)
-    print(model.mode)
     pprint.pprint(model.road_to_weight)
     result = model.solve()
-    # print(result)
-    # r = {
-    #     'routes': [[{'lat': p[0], 'lng': p[1]} for p in point] for point in result.get('routes', [])],
-    #     'dropped_nodes': [{'lat': p[0], 'lng': p[1]} for p in result.get('dropped_nodes', [])]
-    # }
-    # print(r)
-    # {'routes': [[{'lat': 50.4486941427873, 'lng': 30.52272858686755}, {'lat': 50.443182537581635, 'lng': 30.537797837451716}, {'lat': 50.43837215321555, 'lng': 30.511361985400935}]]
 
-    return jsonify(result)
+    return web.json_response(result)
 
 
-@app.route('/front')
-def front():
-    return render_template('index.html')
+def main():
+    app = web.Application()
+    app['ors_querer'] = aiohttp.ClientSession()
+    app.add_routes(routes)
+    web.run_app(app)
 
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', debug=True, port=8080)
+    asyncio.run(main())
