@@ -69,7 +69,8 @@ class ORS(object):
         }
 
         async with client.post(url, json=body, headers=headers) as resp:
-            assert resp.status == 200
+            print(await resp.text(), "TEXT")
+            # assert resp.status == 200
             return await resp.json()
 
     async def call_api(self,
