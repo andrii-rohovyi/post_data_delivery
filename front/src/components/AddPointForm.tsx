@@ -107,7 +107,7 @@ export const AddPointForm: React.FC<Props> = ({
           }))
       }
       console.log(data.central_store.time_window, 'central time_window');
-      const rawResponse = await fetch('/', {
+      const rawResponse = await fetch('http://localhost:8080', {
         method: 'POST',
         headers: {
           'Accept': 'application/json',
@@ -220,7 +220,6 @@ export const AddPointForm: React.FC<Props> = ({
                           component={DatePicker}
                           placeholder="Select date"
                           style={{width: "55%", marginTop: "8px"}}
-                          validate={required}
                         />
                   </div>
                   <div
