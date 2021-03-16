@@ -395,6 +395,9 @@ export const AddPointForm: React.FC<Props> = ({
                                   lat: 50.4486941427873,
                                   lng: 30.52272858686755
                               }]);
+                              setShowResult(false);
+                              const a = new maps.maps.Polyline();
+                              a.setMap(null);
                           }}
                           disabled={submitting}
                       >
