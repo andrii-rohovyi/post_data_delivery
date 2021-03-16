@@ -107,7 +107,7 @@ export const AddPointForm: React.FC<Props> = ({
           }))
       }
       console.log(data.central_store.time_window, 'central time_window');
-      const rawResponse = await fetch('http://localhost:8080', {
+      const rawResponse = await fetch('/', {
         method: 'POST',
         headers: {
           'Accept': 'application/json',
@@ -326,7 +326,7 @@ export const AddPointForm: React.FC<Props> = ({
                           paddingBottom: "3px",
                           marginRight: "46px",
                       }}>
-                          {index === 0 ? "Starting Point" : `Point ${index + 1}`
+                          {index === 0 ? "Starting Point" : `Point ${index}`
                           }
                       </p>
                       <Field
