@@ -62,7 +62,7 @@ def main():
     # Configure CORS on all routes.
     for route in list(app.router.routes()):
         cors.add(route)
-
+    
     app['ors_querer'] = aiohttp.ClientSession()
     web.run_app(app)
 

@@ -2,6 +2,7 @@ import aiohttp
 import os
 import asyncio
 import nest_asyncio
+import itertools
 from typing import List, Tuple, Dict, Coroutine, Any
 
 from openrouteservice import convert
@@ -51,9 +52,11 @@ class ORS(object):
         Returns
         -------
         dict
-            Coroutine of Openroute Service API response
+            With path from Openroute Service API and dropped nodes if there are any
 
         """
+        if len(points) <= 1:
+            return {'response': [], 'dropped_nodes': []}
         url = self.base_api_url.format(ref, mode)
 
         body = {}
@@ -68,10 +71,24 @@ class ORS(object):
             'Content-Type': 'application/json; charset=utf-8'
         }
 
+        dropped_nodes = []
         async with client.post(url, json=body, headers=headers) as resp:
-            print(await resp.text(), "TEXT")
-            # assert resp.status == 200
-            return await resp.json()
+            if resp.status == 200:
+                result = await resp.json()
+                return {'response': result, 'dropped_nodes': dropped_nodes}
+            else:
+                result = await resp.json()
+                err = result['error']['message']
+                idx_err = int(err.split(':')[0].split(' ')[-1])
+                dropped_nodes.append(points[idx_err])
+                del points[idx_err]
+                if len(points) > 1:
+                    updated_resp = await self.fetch(self.session, points, ref, mode)
+                    dropped_nodes.extend(updated_resp['dropped_nodes'])
+                    return {'response': updated_resp['response'], 'dropped_nodes': dropped_nodes}
+                else:
+                    return {'response': [], 'dropped_nodes': dropped_nodes}
+            
 
     async def call_api(self,
                        points: Tuple[Tuple[float, float], Tuple[float, float]],
@@ -153,7 +170,7 @@ class ORS(object):
         ors_points = [[coord[1], coord[0]] for coord in points]
         returns = asyncio.run(self.query(ors_points, 'matrix', mode))
 
-        durations = returns[0]['durations']
+        durations = returns[0]['response']['durations']
 
         points_dictionaries = {(tuple(points[i]), tuple(points[j])): durations[i][j] if durations[i][j] else MAX_WEIGHT 
                                 for j in range(len(points)) for i in range(len(points))}
@@ -184,8 +201,12 @@ class ORS(object):
 
         """
         returns = asyncio.run(self.query(points, 'directions', mode))
-        routes = [convert.decode_polyline(route['routes'][0]['geometry'])['coordinates'] for route in returns]
-        routes = [[[coord[1], coord[0]] for coord in route] for route in routes]
 
-        return routes
+        resps = [obj['response'] for obj in returns]
+        dropped_nodes = list(itertools.chain.from_iterable([ret['dropped_nodes'] for ret in returns]))
+
+        routes = [convert.decode_polyline(route['routes'][0]['geometry'])['coordinates'] if len(route) else [] for route in resps]
+        routes = [[[coord[1], coord[0]] for coord in route] if len(route) else [] for route in routes ]
+
+        return routes, dropped_nodes
 
