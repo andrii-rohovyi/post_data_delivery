@@ -184,13 +184,17 @@ class LogisticOptimizer(object):
                 index = solution.Value(routing.NextVar(index))
 
             courier_id = self.couriers[courier_number]['pid']
-            routes.append({'courier_id': courier_id, 'route': route}, )
+            routes.append({'courier_id': courier_id, 'route': route})
 
         points = [[[coords['lng'], coords['lat']] for coords in obj['route']] for obj in routes]
-        detailed_routes = self.routing_manager.directions_calculation(points, self.mode)
+
+        detailed_routes, new_drop = self.routing_manager.directions_calculation(points, self.mode)
+        dropped_nodes.extend([{'lat': node[1], 'lng': node[0]} for node in new_drop])
+
         for i, route in enumerate(routes):
-            print([{'lat': p[0], 'lng': p[1]} for p in detailed_routes[i]])
             route['detailed_route'] = [{'lat': p[0], 'lng': p[1]} for p in detailed_routes[i]]
+
+            route['route'] = [coords for coords in route['route'] if coords not in dropped_nodes]
 
         return {'routes': routes, 'dropped_nodes': dropped_nodes}
 
